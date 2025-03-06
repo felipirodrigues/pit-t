@@ -1,0 +1,183 @@
+export default {
+  translation: {
+    menu: {
+      home: 'Início',
+      digitalCollection: 'Acervo Digital',
+      collaborate: 'Colabore Conosco',
+      gallery: 'Fotos e Vídeos',
+      login: 'Entrar'
+    },
+    footer: {
+      copyright: '© 2025 Sistema Tucuju Tecnologia',
+    },
+    home: {
+      title: 'Mapa Interativo',
+      description: 'Clique em uma localidade no mapa para ver informações detalhadas.',
+    },
+    locations: {
+      macapa: {
+        name: 'Macapá',
+        description: 'Capital do Amapá, cortada pela linha do Equador'
+      },
+      santana: {
+        name: 'Santana',
+        description: 'Segundo maior município do estado, importante porto fluvial'
+      },
+      laranjal: {
+        name: 'Laranjal do Jari',
+        description: 'Maior produtor de castanha-do-pará do estado'
+      },
+      oiapoque: {
+        name: 'Oiapoque',
+        description: 'Cidade fronteiriça com a Guiana Francesa'
+      }
+    },
+    locationDetails: {
+      notFound: 'Localidade não encontrada',
+      indicators: {
+        title: 'Indicadores',
+        population: 'População',
+        area: 'Área',
+        gdp: 'PIB per capita',
+        hdi: 'IDH'
+      },
+      gallery: {
+        title: 'Galeria',
+        fortressTitle: 'Fortaleza de São José',
+        marcoZeroTitle: 'Marco Zero',
+        waterfrontTitle: 'Beira Rio'
+      },
+      digitalCollection: {
+        title: 'Acervo Digital',
+        searchFilters: 'Filtros de Busca',
+        search: {
+          general: 'Busca geral...',
+          year: 'Ano...',
+          author: 'Autor...',
+          tags: 'Tags...'
+        },
+        tabs: {
+          books: 'Livros',
+          reports: 'Relatórios',
+          articles: 'Artigos',
+          others: 'Outros'
+        },
+        table: {
+          title: 'Título',
+          author: 'Autor',
+          year: 'Ano',
+          format: 'Formato',
+          size: 'Tamanho',
+          tags: 'Tags',
+          actions: 'Ações'
+        },
+        actions: {
+          view: 'Visualizar documento',
+          download: 'Baixar documento'
+        }
+      }
+    },
+    collaborate: {
+      title: 'Colabore Conosco',
+      description: 'Sua contribuição é valiosa para enriquecer nosso acervo digital. Compartilhe documentos, fotos, vídeos ou envie suas sugestões para ajudar a preservar e divulgar a história e cultura do Amapá.',
+      form: {
+        fullName: {
+          label: 'Nome Completo',
+          placeholder: 'Seu nome completo'
+        },
+        email: {
+          label: 'E-mail',
+          placeholder: 'seu.email@exemplo.com'
+        },
+        phone: {
+          label: 'Telefone',
+          placeholder: '(96) 99999-9999'
+        },
+        subject: {
+          label: 'Assunto',
+          placeholder: 'Assunto da mensagem'
+        },
+        message: {
+          label: 'Mensagem',
+          placeholder: 'Descreva sua contribuição ou mensagem...'
+        },
+        files: {
+          label: 'Arquivos (opcional)',
+          dragText: 'Arraste e solte arquivos aqui ou',
+          buttonText: 'Selecione arquivos',
+          fileSize: 'KB'
+        },
+        submit: 'Enviar Mensagem'
+      }
+    },
+    auth: {
+      login: {
+        title: 'Bem-vindo de volta',
+        subtitle: 'Faça login para acessar sua conta',
+        submit: 'Entrar',
+        switchToRegister: 'Não tem uma conta? Registre-se'
+      },
+      register: {
+        title: 'Criar uma conta',
+        subtitle: 'Registre-se para começar',
+        submit: 'Registrar',
+        switchToLogin: 'Já tem uma conta? Faça login'
+      },
+      form: {
+        name: 'Nome',
+        namePlaceholder: 'Seu nome completo',
+        email: 'E-mail',
+        emailPlaceholder: 'seu.email@exemplo.com',
+        password: 'Senha',
+        passwordPlaceholder: 'Sua senha',
+        confirmPassword: 'Confirmar senha',
+        confirmPasswordPlaceholder: 'Confirme sua senha'
+      }
+    },
+    admin: {
+      menu: {
+        dashboard: 'Dashboard',
+        locations: 'Localidades',
+        indicators: 'Indicadores',
+        gallery: 'Galeria',
+        collection: 'Acervo Digital',
+        users: 'Usuários',
+        collaboration: 'Colaborações',
+        reports: 'Relatórios',
+        logout: 'Sair'
+      },
+      dashboard: {
+        title: 'Dashboard',
+        blocks: {
+          locations: {
+            title: 'Localidades',
+            empty: 'Nenhuma localidade encontrada',
+            add: 'Adicionar localidade'
+          },
+          users: {
+            title: 'Usuários',
+            empty: 'Nenhum usuário encontrado',
+            add: 'Adicionar usuário'
+          },
+          documents: {
+            title: 'Documentos',
+            empty: 'Nenhum documento encontrado',
+            add: 'Adicionar documento'
+          },
+          collaborations: {
+            title: 'Colaborações',
+            empty: 'Nenhuma colaboração encontrada'
+          }
+        },
+        recentActivity: 'Atividade Recente',
+        actions: {
+          edit: 'Editar',
+          delete: 'Excluir',
+          view: 'Visualizar',
+          approve: 'Aprovar',
+          reject: 'Rejeitar'
+        }
+      }
+    }
+  },
+};
