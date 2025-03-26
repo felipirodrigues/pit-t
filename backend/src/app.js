@@ -5,6 +5,7 @@ const locationRoutes = require('../routes/locations');
 const indicatorRoutes = require('../routes/indicators');
 const digitalCollectionRoutes = require('../routes/digitalCollection');
 const collaborationRoutes = require('../routes/collaboration');
+const galleryRoutes = require('../routes/gallery');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/indicators', indicatorRoutes);
 app.use('/api/digital-collection', digitalCollectionRoutes);
 app.use('/api/collaboration', collaborationRoutes);
+app.use('/api/gallery', galleryRoutes);
 
 // Tratamento de erros
 app.use((err, req, res, next) => {
