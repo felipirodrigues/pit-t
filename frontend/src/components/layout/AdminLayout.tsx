@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   MapPin,
+  Map,
   TrendingUp,
   Image,
   BookOpen,
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 
 const AdminLayout = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -32,8 +33,11 @@ const AdminLayout = () => {
   ];
 
   const handleLogout = () => {
-    // Aqui você implementará a lógica de logout quando tivermos autenticação
     navigate('/');
+  };
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
   };
 
   return (
@@ -45,24 +49,60 @@ const AdminLayout = () => {
         }`}
       >
         <div className="h-full px-3 py-4 overflow-y-auto bg-forest-green">
-          <div className="flex items-center justify-between mb-6 px-2">
-            <h1 className="text-xl font-bold text-white">PIT-T Admin</h1>
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-6">
+          <Map className="w-12 h-12 mx-auto text-green-400" />
+          </div>
+
+          {/* Bandeiras de idiomas */}
+          <div className="flex justify-center gap-2 mb-6">
             <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="p-2 text-white rounded-lg md:hidden hover:bg-forest-green/50"
+              onClick={() => changeLanguage('pt')}
+              className={`w-8 h-6 rounded-sm overflow-hidden ${
+                i18n.language === 'pt' ? 'ring-2 ring-white' : ''
+              }`}
             >
-              <X className="w-6 h-6" />
+              <img
+                src="https://flagcdn.com/br.svg"
+                alt="Português"
+                className="w-full h-full object-cover"
+              />
+            </button>
+            <button
+              onClick={() => changeLanguage('fr')}
+              className={`w-8 h-6 rounded-sm overflow-hidden ${
+                i18n.language === 'fr' ? 'ring-2 ring-white' : ''
+              }`}
+            >
+              <img
+                src="https://flagcdn.com/fr.svg"
+                alt="Français"
+                className="w-full h-full object-cover"
+              />
+            </button>
+            <button
+              onClick={() => changeLanguage('en')}
+              className={`w-8 h-6 rounded-sm overflow-hidden ${
+                i18n.language === 'en' ? 'ring-2 ring-white' : ''
+              }`}
+            >
+              <img
+                src="https://flagcdn.com/us.svg"
+                alt="English"
+                className="w-full h-full object-cover"
+              />
             </button>
           </div>
 
-          <ul className="space-y-2">
+          {/* Menu */}
+          <ul className="space-y-1">
             {menuItems.map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}
                   end={item.path === '/admin'}
                   className={({ isActive }) =>
-                    `flex items-center p-3 rounded-lg transition-colors ${
+                    `flex items-center p-2 rounded-lg transition-colors ${
                       isActive
                         ? 'bg-green-600 text-white'
                         : 'text-white/80 hover:bg-forest-green/50 hover:text-white'
@@ -70,19 +110,20 @@ const AdminLayout = () => {
                   }
                 >
                   <item.icon className="w-5 h-5 mr-3" />
-                  <span>{item.label}</span>
+                  <span className="text-sm">{item.label}</span>
                 </NavLink>
               </li>
             ))}
           </ul>
 
+          {/* Botão de logout */}
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-forest-green/20">
             <button
               onClick={handleLogout}
-              className="flex items-center w-full p-3 rounded-lg text-white/80 hover:bg-forest-green/50 hover:text-white transition-colors"
+              className="flex items-center w-full p-2 rounded-lg text-white/80 hover:bg-forest-green/50 hover:text-white transition-colors"
             >
               <LogOut className="w-5 h-5 mr-3" />
-              <span>{t('admin.menu.logout')}</span>
+              <span className="text-sm">{t('admin.menu.logout')}</span>
             </button>
           </div>
         </div>

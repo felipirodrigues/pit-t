@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Pencil, Trash2, Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, ChevronLeft, ChevronRight, FolderOpen } from 'lucide-react';
 
 interface Location {
   id: number;
@@ -16,10 +17,11 @@ interface Gallery {
   location_name?: string;
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 15;
 
 const Gallery = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -154,38 +156,43 @@ const Gallery = () => {
     setCurrentPage(page);
   };
 
+  // Navegar para os itens da galeria
+  const handleViewItems = (galleryId: number) => {
+    navigate(`/admin/gallery/${galleryId}/items`);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{t('admin.menu.gallery')}</h1>
+        <h1 className="text-xl font-bold">{t('admin.menu.gallery')}</h1>
         <button
           onClick={handleAdd}
-          className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-600 transition-colors"
+          className="bg-green-500 text-white px-3 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-green-600 transition-colors text-sm"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Adicionar Galeria
         </button>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="bg-white p-4 rounded-lg shadow-md">
         {/* Filtros */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
               name="name"
               value={filters.name}
               onChange={handleFilterChange}
               placeholder="Buscar por nome..."
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="pl-8 pr-3 py-1.5 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
             />
           </div>
           <select
             name="location_id"
             value={filters.location_id}
             onChange={handleFilterChange}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
           >
             <option value="">Todas as localidades</option>
             {locations.map(location => (
@@ -198,7 +205,7 @@ const Gallery = () => {
             name="type"
             value={filters.type}
             onChange={handleFilterChange}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
           >
             <option value="">Todos os tipos</option>
             <option value="photo">Fotos</option>
@@ -210,40 +217,47 @@ const Gallery = () => {
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localidade</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localidade</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedGalleries.map((gallery) => (
                 <tr key={gallery.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-2 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{gallery.name}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-2 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{gallery.location_name}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-2 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       gallery.type === 'photo' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
                     }`}>
                       {gallery.type === 'photo' ? 'Foto' : 'Vídeo'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleViewItems(gallery.id)}
+                      className="text-green-600 hover:text-green-900 mr-3"
+                      title="Ver itens"
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => handleEdit(gallery)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-600 hover:text-blue-900 mr-3"
                     >
-                      <Pencil className="w-5 h-5" />
+                      <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(gallery.id)}
                       className="text-red-600 hover:text-red-900"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -253,11 +267,11 @@ const Gallery = () => {
         </div>
 
         {/* Paginação */}
-        {totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        {filteredGalleries.length > 0 && (
+          <div className="mt-3 flex items-center justify-between border-t border-gray-200 bg-white px-3 py-2 sm:px-4">
             <div className="flex flex-1 items-center justify-between">
               <div>
-                <p className="text-sm text-gray-700">
+                <p className="text-xs text-gray-700">
                   Mostrando <span className="font-medium">{startIndex + 1}</span> a{' '}
                   <span className="font-medium">
                     {Math.min(startIndex + ITEMS_PER_PAGE, filteredGalleries.length)}
@@ -270,16 +284,16 @@ const Gallery = () => {
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center rounded-l-md px-1.5 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Anterior</span>
-                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
-                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                      className={`relative inline-flex items-center px-3 py-1.5 text-xs font-semibold ${
                         currentPage === page
                           ? 'z-10 bg-green-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600'
                           : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
@@ -291,10 +305,10 @@ const Gallery = () => {
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center rounded-r-md px-1.5 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Próximo</span>
-                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </nav>
               </div>

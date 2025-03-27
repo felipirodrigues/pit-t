@@ -13,6 +13,7 @@ import Locations from '../pages/admin/Locations';
 import Indicators from '../pages/admin/Indicators';
 import Collection from '../pages/admin/Collection';
 import Gallery from '../pages/admin/Gallery';
+import GalleryItems from '../pages/admin/GalleryItems';
 
 export const router = createBrowserRouter([
   {
@@ -72,6 +73,10 @@ export const router = createBrowserRouter([
       {
         path: 'gallery',
         element: <Gallery />
+      },
+      {
+        path: 'gallery/:id/items',
+        element: <GalleryItems />
       }
     ]
   }

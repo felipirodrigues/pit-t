@@ -400,28 +400,12 @@ const Collection = () => {
         </div>
 
         {/* Paginação */}
-        {!loading && !error && totalDocuments > 0 && totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6 mt-4">
-            <div className="flex flex-1 justify-between sm:hidden">
-              <button
-                onClick={() => handlePageChange(filters.page - 1)}
-                disabled={filters.page === 1}
-                className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Anterior
-              </button>
-              <button
-                onClick={() => handlePageChange(filters.page + 1)}
-                disabled={filters.page === totalPages}
-                className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Próxima
-              </button>
-            </div>
-            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        {!loading && !error && totalDocuments > 0 && (
+          <div className="mt-3 flex items-center justify-between border-t border-gray-200 bg-white px-3 py-2 sm:px-4">
+            <div className="flex flex-1 items-center justify-between">
               <div>
-                <p className="text-sm text-gray-700">
-                  Mostrando <span className="font-medium">{((filters.page - 1) * ITEMS_PER_PAGE) + 1}</span> até{' '}
+                <p className="text-xs text-gray-700">
+                  Mostrando <span className="font-medium">{((filters.page - 1) * ITEMS_PER_PAGE) + 1}</span> a{' '}
                   <span className="font-medium">
                     {Math.min(filters.page * ITEMS_PER_PAGE, totalDocuments)}
                   </span>{' '}
@@ -433,18 +417,19 @@ const Collection = () => {
                   <button
                     onClick={() => handlePageChange(filters.page - 1)}
                     disabled={filters.page === 1}
-                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                    className="relative inline-flex items-center rounded-l-md px-1.5 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <span className="sr-only">Anterior</span>
+                    <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
-                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                      className={`relative inline-flex items-center px-3 py-1.5 text-xs font-semibold ${
                         page === filters.page
-                          ? 'z-10 bg-green-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600'
-                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0'
+                          ? 'z-10 bg-green-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600'
+                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
                       }`}
                     >
                       {page}
@@ -453,9 +438,10 @@ const Collection = () => {
                   <button
                     onClick={() => handlePageChange(filters.page + 1)}
                     disabled={filters.page === totalPages}
-                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                    className="relative inline-flex items-center rounded-r-md px-1.5 py-1.5 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ChevronRight className="h-5 w-5" />
+                    <span className="sr-only">Próximo</span>
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </nav>
               </div>
