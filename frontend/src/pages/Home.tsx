@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import Globe from 'react-globe.gl';
 import axios from 'axios';
 import { MapPin, Search, ZoomIn, ZoomOut, Globe as GlobeIcon, RotateCcw, Loader2 } from 'lucide-react';
@@ -17,8 +18,10 @@ interface Location {
 
 const Home = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [locations, setLocations] = useState<Location[]>([]);
   const [hoverInfo, setHoverInfo] = useState<any>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [dimensions, setDimensions] = useState({
     width: window.innerWidth,
     height: window.innerHeight
@@ -68,8 +71,10 @@ const Home = () => {
     }
   }, []);
 
-  // Função para determinar a cor dos pontos com base no país
+  // Função para determinar a cor dos pontos com base no país e estado de hover
   const getPointColor = (d: Location) => {
+    if (d.id === hoveredId) return '#22c55e'; // Verde quando hover
+    
     // Países que queremos destacar
     const highlightedCountries = ['Brasil', 'Brazil', 'Suriname', 'Guiana', 'Venezuela', 'França', 'France', 'Guiana Francesa', 'French Guiana'];
     
@@ -125,6 +130,11 @@ const Home = () => {
     }
   }, [globeRef.current]);
 
+  // Função para navegar para a página de detalhes
+  const handleLocationClick = (locationId: number) => {
+    navigate(`/location/${locationId}`);
+  };
+
   return (
     <div className="fixed inset-0 overflow-hidden">
       <Sidebar />
@@ -154,23 +164,69 @@ const Home = () => {
           atmosphereColor="#1e293b"
           atmosphereAltitude={0.15}
           
-          // Pontos de localização
-          pointsData={locations}
-          pointLabel={({ name, country }: Location) => `
-            <div class="bg-slate-800 p-3 rounded-lg shadow-lg border border-slate-700" style="min-width: 150px; text-align: center;">
-              <div style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">${name}</div>
-              <div style="font-size: 14px;">${country}</div>
-            </div>
-          `}
-          pointLat={(d: Location) => d.latitude}
-          pointLng={(d: Location) => d.longitude}
-          pointColor={getPointColor}
-          pointAltitude={0.03}
-          pointRadius={0.6}
-          pointResolution={24}
-          pointsMerge={false}
-          onPointHover={setHoverInfo}
-          pointsTransitionDuration={1000}
+          // Configuração dos marcadores HTML
+          htmlElementsData={filteredLocations}
+          htmlLat={(d: Location) => d.latitude}
+          htmlLng={(d: Location) => d.longitude}
+          htmlAltitude={0}
+          htmlTransitionDuration={0}
+          htmlElement={(d: Location) => {
+            const el = document.createElement('div');
+            
+            el.innerHTML = `
+              <div style="
+                transform: translate(-50%, -100%) scale(${d.id === hoveredId ? 1.2 : 1});
+                position: relative;
+                width: 28px;
+                height: 42px;
+                cursor: pointer;
+                pointer-events: auto;
+                transition: all 0.2s ease;
+              ">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="42">
+                  <path d="M12 0C5.4 0 0 5.4 0 12c0 7.2 12 24 12 24s12-16.8 12-24c0-6.6-5.4-12-12-12z" 
+                    fill="${getPointColor(d)}" />
+                  <circle cx="12" cy="12" r="6" fill="white" />
+                </svg>
+              </div>
+            `;
+            
+            // Adicionar evento de hover
+            el.onmouseover = () => {
+              setHoverInfo({
+                ...d,
+                lat: Number(d.latitude),
+                lng: Number(d.longitude)
+              });
+              setHoveredId(d.id);
+            };
+            
+            el.onmouseout = () => {
+              setHoverInfo(null);
+              setHoveredId(null);
+            };
+            
+            // Modificar o evento de clique para navegar para a página de detalhes
+            el.onclick = () => {
+              if (globeRef.current) {
+                globeRef.current.pointOfView({ 
+                  lat: d.latitude, 
+                  lng: d.longitude, 
+                  altitude: 1.2
+                }, 500);
+                
+                // Aguardar a animação do globo antes de navegar
+                setTimeout(() => {
+                  handleLocationClick(d.id);
+                }, 600);
+              }
+            };
+            
+            return el;
+          }}
+          
+          // Remover pointsData para evitar duplicação
+          pointsData={[]}
           onGlobeReady={() => setGlobeReady(true)}
         />
       </div>
@@ -211,22 +267,45 @@ const Home = () => {
               {filteredLocations.map((location) => (
                 <div
                   key={location.id}
-                  className="flex items-center gap-2 py-1 px-1.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+                  className={`flex items-center gap-2 py-1 px-1.5 rounded-md transition-all duration-200 cursor-pointer ${
+                    location.id === hoveredId 
+                      ? 'bg-white/20 scale-105' 
+                      : 'hover:bg-white/10'
+                  }`}
+                  onMouseEnter={() => {
+                    setHoverInfo({
+                      ...location,
+                      lat: Number(location.latitude),
+                      lng: Number(location.longitude)
+                    });
+                    setHoveredId(location.id);
+                  }}
+                  onMouseLeave={() => {
+                    setHoverInfo(null);
+                    setHoveredId(null);
+                  }}
                   onClick={() => {
                     if (globeRef.current) {
                       globeRef.current.pointOfView({ 
                         lat: location.latitude, 
                         lng: location.longitude, 
                         altitude: 1.5 
-                      }, 1000);
+                      }, 500);
+                      
+                      // Aguardar a animação do globo antes de navegar
+                      setTimeout(() => {
+                        handleLocationClick(location.id);
+                      }, 600);
                     }
                   }}
                 >
                   <div className={`w-6 h-6 ${
-                    getPointColor(location) === '#eab308' 
-                      ? 'bg-yellow-500/50' 
-                      : 'bg-blue-500/50'
-                  } rounded-md flex items-center justify-center flex-shrink-0`}>
+                    location.id === hoveredId
+                      ? 'bg-green-500/50'
+                      : getPointColor(location) === '#eab308' 
+                        ? 'bg-yellow-500/50' 
+                        : 'bg-blue-500/50'
+                  } rounded-md flex items-center justify-center flex-shrink-0 transition-colors duration-200`}>
                     <MapPin className="w-3.5 h-3.5 text-white" />
                   </div>
                   <div className="min-w-0">
@@ -255,14 +334,13 @@ const Home = () => {
                 <div className="text-white">
                   <p className="font-medium text-base">{hoverInfo.name}</p>
                   <p className="text-sm text-white/80">{hoverInfo.country}</p>
-                  {hoverInfo.lat && hoverInfo.lng && (
-                    <div className="mt-2 pt-2 border-t border-white/10">
-                      <p className="text-xs text-white/70">Coordenadas:</p>
-                      <p className="text-xs font-mono">
-                        {hoverInfo.lat.toFixed(4)}°, {hoverInfo.lng.toFixed(4)}°
-                      </p>
-                    </div>
-                  )}
+                  <div className="mt-2 pt-2 border-t border-white/10">
+                    <p className="text-xs text-white/70">Coordenadas:</p>
+                    <p className="text-xs font-mono">
+                      {typeof hoverInfo.lat === 'number' ? hoverInfo.lat.toFixed(4) : hoverInfo.latitude.toFixed(4)}°, 
+                      {typeof hoverInfo.lng === 'number' ? hoverInfo.lng.toFixed(4) : hoverInfo.longitude.toFixed(4)}°
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="text-sm text-white/80">
