@@ -7,7 +7,7 @@ const MainLayout = () => {
   const isHomePage = location.pathname === '/';
 
   return (
-    <div className={`flex min-h-screen ${isHomePage ? 'bg-[#132712]' : 'bg-[#eee]'}`}>
+    <div className={`flex min-h-screen ${isHomePage ? 'bg-[#000000]' : 'bg-[#eee]'}`}>
       <Sidebar />
       
       <main className="flex-1 w-full p-4 transition-all duration-300 md:ml-64">

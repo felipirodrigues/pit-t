@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "react-globe.gl": "^2.33.2",
+    "three": "^0.175.0"
+  },
+  "devDependencies": {
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-scale-chromatic": "^3.1.0",
+    "@types/three": "^0.175.0",
+    "mapshaper": "^0.6.102"
+  }
+}

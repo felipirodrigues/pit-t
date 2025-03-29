@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "name": "Macapá",
+    "country": "Brasil",
+    "latitude": 0.0356,
+    "longitude": -51.0705
+  },
+  {
+    "id": 2,
+    "name": "Belém",
+    "country": "Brasil",
+    "latitude": -1.4558,
+    "longitude": -48.5044
+  },
+  {
+    "id": 3,
+    "name": "Manaus",
+    "country": "Brasil",
+    "latitude": -3.1190,
+    "longitude": -60.0217
+  },
+  {
+    "id": 4,
+    "name": "Santarém",
+    "country": "Brasil",
+    "latitude": -2.4425,
+    "longitude": -54.7016
+  },
+  {
+    "id": 5,
+    "name": "Boa Vista",
+    "country": "Brasil",
+    "latitude": 2.8235,
+    "longitude": -60.6758
+  },
+  {
+    "id": 6,
+    "name": "Cayenne",
+    "country": "França",
+    "latitude": 4.9371,
+    "longitude": -52.3258
+  },
+  {
+    "id": 7,
+    "name": "Georgetown",
+    "country": "Guiana",
+    "latitude": 6.8013,
+    "longitude": -58.1553
+  },
+  {
+    "id": 8,
+    "name": "Paramaribo",
+    "country": "Suriname",
+    "latitude": 5.8520,
+    "longitude": -55.2038
+  },
+  {
+    "id": 9,
+    "name": "Caracas",
+    "country": "Venezuela",
+    "latitude": 10.4806,
+    "longitude": -66.9036
+  },
+  {
+    "id": 10,
+    "name": "São Paulo",
+    "country": "Brasil",
+    "latitude": -23.5505,
+    "longitude": -46.6333
+  },
+  {
+    "id": 11,
+    "name": "Rio de Janeiro",
+    "country": "Brasil",
+    "latitude": -22.9068,
+    "longitude": -43.1729
+  },
+  {
+    "id": 12,
+    "name": "Paris",
+    "country": "França",
+    "latitude": 48.8566,
+    "longitude": 2.3522
+  },
+  {
+    "id": 13,
+    "name": "Oiapoque",
+    "country": "Brasil",
+    "latitude": 3.8396,
+    "longitude": -51.8301
+  },
+  {
+    "id": 14,
+    "name": "São Luís",
+    "country": "Brasil",
+    "latitude": -2.5307,
+    "longitude": -44.3068
+  },
+  {
+    "id": 15,
+    "name": "Bogotá",
+    "country": "Colômbia",
+    "latitude": 4.7110,
+    "longitude": -74.0721
+  }
+] 

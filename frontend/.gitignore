@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Pasta node_modules
+node_modules
+
+# Pasta de build
+build
+
+
