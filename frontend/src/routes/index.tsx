@@ -14,6 +14,7 @@ import Indicators from '../pages/admin/Indicators';
 import Collection from '../pages/admin/Collection';
 import Gallery from '../pages/admin/Gallery';
 import GalleryItems from '../pages/admin/GalleryItems';
+import Galleries from '../pages/Galleries';
 
 export const router = createBrowserRouter([
   {
@@ -34,7 +35,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'galeria',
-        element: <div>Fotos e Vídeos - Em desenvolvimento</div>
+        element: <Galleries />
       },
       {
         path: 'location/:id',
@@ -47,6 +48,10 @@ export const router = createBrowserRouter([
       {
         path: 'user',
         element: <Users />
+      },
+      {
+        path: 'galerias',
+        element: <Galleries />
       }
     ]
   },
