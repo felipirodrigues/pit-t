@@ -1,17 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const CollaborationController = require('../src/controllers/CollaborationController');
+const auth = require('../src/middlewares/auth');
 
-// Rota para criar nova colaboração
+// Rotas públicas
 router.post('/', CollaborationController.create);
+router.get('/:id', CollaborationController.findById);
 
-// Rota para listar todas as colaborações
-router.get('/', CollaborationController.list);
-
-// Rota para buscar colaboração por ID
-router.get('/:id', CollaborationController.getById);
-
-// Rota para deletar colaboração
-router.delete('/:id', CollaborationController.delete);
+// Rotas protegidas (requerem autenticação)
+router.get('/', auth, CollaborationController.findAll);
+router.patch('/:id/status', auth, CollaborationController.updateStatus);
+router.delete('/:id', auth, CollaborationController.delete);
 
 module.exports = router; 

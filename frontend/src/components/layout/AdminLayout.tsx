@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   LogOut,
-  Globe
+  Globe,
+  GitBranch
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -23,14 +24,15 @@ const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const menuItems = [
-    { path: '/admin', icon: LayoutDashboard, label: t('admin.menu.dashboard') },
-    { path: '/admin/locations', icon: MapPin, label: t('admin.menu.locations') },
+    //{ path: '/admin', icon: LayoutDashboard, label: t('admin.menu.dashboard') },
+    //{ path: '/admin/locations', icon: MapPin, label: t('admin.menu.locations') },
+    { path: '/admin/twin-cities', icon: GitBranch, label: 'Cidades Gêmeas' },
     { path: '/admin/indicators', icon: TrendingUp, label: t('admin.menu.indicators') },
     { path: '/admin/gallery', icon: Image, label: t('admin.menu.gallery') },
     { path: '/admin/collection', icon: BookOpen, label: t('admin.menu.collection') },
     { path: '/admin/user', icon: Users, label: t('admin.menu.users') },
     { path: '/admin/collaboration', icon: MessageSquare, label: t('admin.menu.collaboration') },
-    { path: '/admin/reports', icon: FileBarChart, label: t('admin.menu.reports') }
+    //{ path: '/admin/reports', icon: FileBarChart, label: t('admin.menu.reports') }
   ];
 
   const handleLogout = () => {

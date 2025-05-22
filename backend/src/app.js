@@ -6,6 +6,8 @@ const indicatorRoutes = require('../routes/indicators');
 const digitalCollectionRoutes = require('../routes/digitalCollection');
 const collaborationRoutes = require('../routes/collaboration');
 const galleryRoutes = require('../routes/gallery');
+const twinCityRoutes = require('../routes/twinCities');
+const userRoutes = require('../routes/users');
 
 const app = express();
 
@@ -18,8 +20,10 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use('/api/locations', locationRoutes);
 app.use('/api/indicators', indicatorRoutes);
 app.use('/api/digital-collection', digitalCollectionRoutes);
-app.use('/api/collaboration', collaborationRoutes);
+app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/gallery', galleryRoutes);
+app.use('/api/twin-cities', twinCityRoutes);
+app.use('/api/users', userRoutes);
 
 // Tratamento de erros
 app.use((err, req, res, next) => {

@@ -1,5 +1,8 @@
 export default {
   translation: {
+    languageSelector: 'Sélectionnez la langue',
+    twinCities: 'Villes Jumelles',
+    noTwinCitiesFound: 'Aucune ville jumelle trouvée',
     menu: {
       home: 'Accueil',
       digitalCollection: 'Collection Numérique',
@@ -75,6 +78,43 @@ export default {
           view: 'Voir le document',
           download: 'Télécharger le document'
         }
+      },
+      categories: {
+        health: 'Santé',
+        population: 'Population',
+        commerce: 'Commerce',
+        education: 'Éducation',
+        environment: 'Environnement'
+      },
+      categoryTitles: {
+        health: 'Chiffres de la Santé',
+        population: 'Chiffres de la Population',
+        commerce: 'Chiffres du Commerce',
+        education: 'Chiffres de l\'Éducation',
+        environment: 'Chiffres de l\'Environnement'
+      },
+      categoryData: {
+        health: 'Données de Santé',
+        population: 'Données Démographiques',
+        commerce: 'Données Commerciales',
+        education: 'Statistiques Éducatives',
+        environment: 'Indicateurs Environnementaux'
+      },
+      noData: {
+        health: 'Aucune donnée de santé disponible pour cette ville.',
+        population: 'Aucune donnée de population disponible pour cette ville.',
+        commerce: 'Aucune donnée commerciale disponible pour cette ville.',
+        education: 'Aucune donnée d\'éducation disponible pour cette ville.',
+        environment: 'Aucune donnée environnementale disponible pour cette ville.'
+      },
+      yearPeriod: 'Année:',
+      source: 'Source:',
+      moreIndicators: {
+        health: 'Plus d\'Indicateurs de Santé',
+        population: 'Plus d\'Indicateurs de Population',
+        commerce: 'Plus d\'Indicateurs de Commerce',
+        education: 'Plus d\'Indicateurs d\'Éducation',
+        environment: 'Plus d\'Indicateurs Environnementaux'
       }
     },
     collaborate: {

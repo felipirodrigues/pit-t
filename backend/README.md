@@ -67,6 +67,11 @@ O sistema segue o padrão MVC, onde:
 - Associação com localidades
 - Histórico de valores
 
+### 4. Cidades Gêmeas
+- CRUD completo de duplas de cidades gêmeas
+- Armazenamento de coordenadas geográficas
+- Descrição da relação entre as cidades
+
 ## Padrões e Boas Práticas
 
 ### 1. Tratamento de Erros
@@ -119,6 +124,15 @@ PUT    /api/indicators/:id  # Atualiza um indicador
 DELETE /api/indicators/:id  # Remove um indicador
 ```
 
+### Cidades Gêmeas
+```
+GET    /api/twin-cities       # Lista todas as duplas de cidades gêmeas
+GET    /api/twin-cities/:id   # Obtém uma dupla de cidades gêmeas específica
+POST   /api/twin-cities       # Cria uma nova dupla de cidades gêmeas
+PUT    /api/twin-cities/:id   # Atualiza uma dupla de cidades gêmeas
+DELETE /api/twin-cities/:id   # Remove uma dupla de cidades gêmeas
+```
+
 ## Banco de Dados
 
 ### Estrutura
@@ -132,6 +146,7 @@ DELETE /api/indicators/:id  # Remove um indicador
 - `indicators`: Armazena indicadores
 - `document_tags`: Relacionamento entre documentos e tags
 - `tags`: Armazena tags para categorização
+- `twin_cities`: Armazena duplas de cidades gêmeas
 
 ## Configuração e Execução
 

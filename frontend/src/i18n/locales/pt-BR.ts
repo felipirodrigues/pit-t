@@ -1,5 +1,8 @@
 export default {
   translation: {
+    languageSelector: 'Selecione o idioma',
+    twinCities: 'Cidades Gêmeas',
+    noTwinCitiesFound: 'Nenhuma cidade gêmea encontrada',
     menu: {
       home: 'Início',
       digitalCollection: 'Acervo Digital',
@@ -75,6 +78,43 @@ export default {
           view: 'Visualizar documento',
           download: 'Baixar documento'
         }
+      },
+      categories: {
+        health: 'Saúde',
+        population: 'População',
+        commerce: 'Comércio',
+        education: 'Educação',
+        environment: 'Meio Ambiente'
+      },
+      categoryTitles: {
+        health: 'Números da Saúde',
+        population: 'Números da População',
+        commerce: 'Números do Comércio',
+        education: 'Números da Educação',
+        environment: 'Números do Meio Ambiente'
+      },
+      categoryData: {
+        health: 'Dados de Saúde',
+        population: 'Dados Demográficos',
+        commerce: 'Dados Comerciais',
+        education: 'Estatísticas Educacionais',
+        environment: 'Indicadores Ambientais'
+      },
+      noData: {
+        health: 'Não há dados de saúde disponíveis para esta cidade.',
+        population: 'Não há dados de população disponíveis para esta cidade.',
+        commerce: 'Não há dados de comércio disponíveis para esta cidade.',
+        education: 'Não há dados de educação disponíveis para esta cidade.',
+        environment: 'Não há dados de meio ambiente disponíveis para esta cidade.'
+      },
+      yearPeriod: 'Ano:',
+      source: 'Fonte:',
+      moreIndicators: {
+        health: 'Mais Indicadores de Saúde',
+        population: 'Mais Indicadores de População',
+        commerce: 'Mais Indicadores de Comércio',
+        education: 'Mais Indicadores de Educação',
+        environment: 'Mais Indicadores de Meio Ambiente'
       }
     },
     collaborate: {

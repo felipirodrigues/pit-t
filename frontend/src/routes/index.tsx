@@ -7,14 +7,16 @@ import LocationDetails from '../pages/LocationDetails';
 import AcervoDigital from '../pages/AcervoDigital';
 import ColaboreConosco from '../pages/ColaboreConosco';
 import Auth from '../pages/Auth';
-import Dashboard from '../pages/admin/Dashboard';
 import Users from '../pages/admin/Users';
-import Locations from '../pages/admin/Locations';
 import Indicators from '../pages/admin/Indicators';
 import Collection from '../pages/admin/Collection';
 import Gallery from '../pages/admin/Gallery';
 import GalleryItems from '../pages/admin/GalleryItems';
 import Galleries from '../pages/Galleries';
+import TwinCities from '../pages/admin/TwinCities';
+import Collaboration from '../pages/admin/Collaboration';
+import ProtectedRoute from '../components/ProtectedRoute';
+import AccessDenied from '../pages/AccessDenied';
 
 export const router = createBrowserRouter([
   {
@@ -42,30 +44,38 @@ export const router = createBrowserRouter([
         element: <LocationDetails />
       },
       {
-        path: 'auth',
-        element: <Auth />
-      },
-      {
         path: 'user',
         element: <Users />
       },
       {
         path: 'galerias',
         element: <Galleries />
+      },
+      {
+        path: 'acesso-negado',
+        element: <AccessDenied />
       }
     ]
   },
   {
+    path: '/auth',
+    element: <Auth />
+  },
+  {
     path: '/admin',
-    element: <AdminLayout />,
+    element: (
+      <ProtectedRoute adminOnly={true}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
-        element: <Dashboard />
+        element: <TwinCities />
       },
       {
-        path: 'locations',
-        element: <Locations />
+        path: 'twin-cities',
+        element: <TwinCities />
       },
       {
         path: 'indicators',
@@ -82,6 +92,10 @@ export const router = createBrowserRouter([
       {
         path: 'gallery/:id/items',
         element: <GalleryItems />
+      },
+      {
+        path: 'collaboration',
+        element: <Collaboration />
       }
     ]
   }

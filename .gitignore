@@ -35,4 +35,9 @@ Thumbs.db
 *.swp
 *.swo
 *.swn
-*.bak 
+*.bak
+
+node_modules/
+scripts/
+@package.json
+@package-lock.json 

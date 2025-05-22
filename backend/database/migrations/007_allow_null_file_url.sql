@@ -1,0 +1,2 @@
+-- Permitir valores NULL na coluna file_url para documentos externos
+ALTER TABLE digital_collection MODIFY COLUMN file_url VARCHAR(255) NULL COMMENT 'Caminho para o arquivo (para documentos internos) ou NULL (para documentos externos)'; 

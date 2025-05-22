@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste da API de Usuários</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .success {
+            color: #27ae60;
+        }
+        .error {
+            color: #e74c3c;
+        }
+        input, select {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste da API de Usuários</h1>
+    
+    <div class="card">
+        <h2>Login</h2>
+        <div class="form-group">
+            <label for="login-email">Email:</label>
+            <input id="login-email" type="email" value="admin@pitt.com">
+        </div>
+        <div class="form-group">
+            <label for="login-password">Senha:</label>
+            <input id="login-password" type="password" value="admin123">
+        </div>
+        <button id="login-btn">Login</button>
+        <div id="login-result"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Listar Usuários</h2>
+        <button id="list-users-btn">Listar Usuários</button>
+        <div id="list-users-result"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Criar Usuário</h2>
+        <div class="form-group">
+            <label for="create-name">Nome:</label>
+            <input id="create-name" type="text" value="Novo Usuário">
+        </div>
+        <div class="form-group">
+            <label for="create-email">Email:</label>
+            <input id="create-email" type="email" value="">
+        </div>
+        <div class="form-group">
+            <label for="create-password">Senha:</label>
+            <input id="create-password" type="password" value="senha123">
+        </div>
+        <button id="create-user-btn">Criar Usuário</button>
+        <div id="create-user-result"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Buscar Usuário por ID</h2>
+        <div class="form-group">
+            <label for="get-user-id">ID do Usuário:</label>
+            <input id="get-user-id" type="number" value="">
+        </div>
+        <button id="get-user-btn">Buscar Usuário</button>
+        <div id="get-user-result"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Atualizar Usuário</h2>
+        <div class="form-group">
+            <label for="update-id">ID do Usuário:</label>
+            <input id="update-id" type="number" value="">
+        </div>
+        <div class="form-group">
+            <label for="update-name">Nome:</label>
+            <input id="update-name" type="text" value="Nome Atualizado">
+        </div>
+        <button id="update-user-btn">Atualizar Usuário</button>
+        <div id="update-user-result"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Excluir Usuário</h2>
+        <div class="form-group">
+            <label for="delete-id">ID do Usuário:</label>
+            <input id="delete-id" type="number" value="">
+        </div>
+        <button id="delete-user-btn">Excluir Usuário</button>
+        <div id="delete-user-result"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Obter Usuário Atual</h2>
+        <button id="get-me-btn">Obter Dados</button>
+        <div id="get-me-result"></div>
+    </div>
+    
+    <script>
+        // Configuração do Axios
+        const api = axios.create({
+            baseURL: 'http://localhost:3000/api'
+        });
+        
+        // Variável para armazenar o token
+        let authToken = '';
+        
+        // Função para formatar JSON
+        function formatJSON(obj) {
+            return JSON.stringify(obj, null, 2);
+        }
+        
+        // Atualizar cabeçalhos com token
+        function updateHeaders() {
+            if (authToken) {
+                api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+            }
+        }
+        
+        // Login
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const resultDiv = document.getElementById('login-result');
+            
+            try {
+                resultDiv.innerHTML = 'Carregando...';
+                const response = await api.post('/users/login', { email, password });
+                authToken = response.data.token;
+                updateHeaders();
+                
+                resultDiv.innerHTML = `
+                    <p class="success">Login realizado com sucesso!</p>
+                    <p>Token: ${authToken.substring(0, 20)}...</p>
+                    <pre>${formatJSON(response.data.user)}</pre>
+                `;
+                
+                // Atualizar campo de email para criar usuário
+                document.getElementById('create-email').value = `teste${Date.now()}@pitt.com`;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">Erro ao fazer login</p>
+                    <pre>${formatJSON(error.response?.data || error.message)}</pre>
+                `;
+            }
+        });
+        
+        // Listar usuários
+        document.getElementById('list-users-btn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('list-users-result');
+            
+            try {
+                resultDiv.innerHTML = 'Carregando...';
+                updateHeaders();
+                const response = await api.get('/users');
+                
+                resultDiv.innerHTML = `
+                    <p class="success">${response.data.length} usuários encontrados</p>
+                    <pre>${formatJSON(response.data)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">Erro ao listar usuários</p>
+                    <pre>${formatJSON(error.response?.data || error.message)}</pre>
+                `;
+            }
+        });
+        
+        // Criar usuário
+        document.getElementById('create-user-btn').addEventListener('click', async () => {
+            const name = document.getElementById('create-name').value;
+            const email = document.getElementById('create-email').value;
+            const password = document.getElementById('create-password').value;
+            const resultDiv = document.getElementById('create-user-result');
+            
+            try {
+                resultDiv.innerHTML = 'Carregando...';
+                updateHeaders();
+                const response = await api.post('/users', { name, email, password });
+                
+                resultDiv.innerHTML = `
+                    <p class="success">Usuário criado com sucesso!</p>
+                    <pre>${formatJSON(response.data)}</pre>
+                `;
+                
+                // Atualizar campos com o ID do usuário criado
+                document.getElementById('get-user-id').value = response.data.id;
+                document.getElementById('update-id').value = response.data.id;
+                document.getElementById('delete-id').value = response.data.id;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">Erro ao criar usuário</p>
+                    <pre>${formatJSON(error.response?.data || error.message)}</pre>
+                `;
+            }
+        });
+        
+        // Buscar usuário por ID
+        document.getElementById('get-user-btn').addEventListener('click', async () => {
+            const id = document.getElementById('get-user-id').value;
+            const resultDiv = document.getElementById('get-user-result');
+            
+            if (!id) {
+                resultDiv.innerHTML = '<p class="error">ID do usuário é obrigatório</p>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = 'Carregando...';
+                updateHeaders();
+                const response = await api.get(`/users/${id}`);
+                
+                resultDiv.innerHTML = `
+                    <p class="success">Usuário encontrado</p>
+                    <pre>${formatJSON(response.data)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">Erro ao buscar usuário</p>
+                    <pre>${formatJSON(error.response?.data || error.message)}</pre>
+                `;
+            }
+        });
+        
+        // Atualizar usuário
+        document.getElementById('update-user-btn').addEventListener('click', async () => {
+            const id = document.getElementById('update-id').value;
+            const name = document.getElementById('update-name').value;
+            const resultDiv = document.getElementById('update-user-result');
+            
+            if (!id) {
+                resultDiv.innerHTML = '<p class="error">ID do usuário é obrigatório</p>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = 'Carregando...';
+                updateHeaders();
+                const response = await api.put(`/users/${id}`, { name });
+                
+                resultDiv.innerHTML = `
+                    <p class="success">Usuário atualizado com sucesso</p>
+                    <pre>${formatJSON(response.data)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">Erro ao atualizar usuário</p>
+                    <pre>${formatJSON(error.response?.data || error.message)}</pre>
+                `;
+            }
+        });
+        
+        // Excluir usuário
+        document.getElementById('delete-user-btn').addEventListener('click', async () => {
+            const id = document.getElementById('delete-id').value;
+            const resultDiv = document.getElementById('delete-user-result');
+            
+            if (!id) {
+                resultDiv.innerHTML = '<p class="error">ID do usuário é obrigatório</p>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = 'Carregando...';
+                updateHeaders();
+                const response = await api.delete(`/users/${id}`);
+                
+                resultDiv.innerHTML = `
+                    <p class="success">Usuário excluído com sucesso</p>
+                    <pre>${formatJSON(response.data)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">Erro ao excluir usuário</p>
+                    <pre>${formatJSON(error.response?.data || error.message)}</pre>
+                `;
+            }
+        });
+        
+        // Obter usuário atual
+        document.getElementById('get-me-btn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('get-me-result');
+            
+            try {
+                resultDiv.innerHTML = 'Carregando...';
+                updateHeaders();
+                const response = await api.get('/users/auth/me');
+                
+                resultDiv.innerHTML = `
+                    <p class="success">Dados do usuário atual</p>
+                    <pre>${formatJSON(response.data)}</pre>
+                `;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">Erro ao obter usuário atual</p>
+                    <pre>${formatJSON(error.response?.data || error.message)}</pre>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 

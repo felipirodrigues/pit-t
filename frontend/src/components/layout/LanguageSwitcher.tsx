@@ -36,6 +36,19 @@ const LanguageSwitcher = () => {
           className="w-full h-full object-cover"
         />
       </button>
+      <button
+        onClick={() => toggleLanguage('en-US')}
+        className={`w-8 h-6 rounded-sm overflow-hidden transition-opacity ${
+          i18n.language === 'en-US' ? 'opacity-100' : 'opacity-50 hover:opacity-75'
+        }`}
+        aria-label="English"
+      >
+        <img
+          src="https://flagcdn.com/us.svg"
+          alt="United States Flag"
+          className="w-full h-full object-cover"
+        />
+      </button>
     </div>
   );
 };

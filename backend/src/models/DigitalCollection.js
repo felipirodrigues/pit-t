@@ -10,7 +10,8 @@ class DigitalCollection {
       let countQuery = `
         SELECT COUNT(DISTINCT dc.id) as total
         FROM digital_collection dc
-        JOIN locations l ON dc.location_id = l.id
+        LEFT JOIN locations l ON dc.location_id = l.id
+        LEFT JOIN twin_cities tc ON dc.twin_city_id = tc.id
         LEFT JOIN document_tags dt ON dc.id = dt.document_id
         LEFT JOIN tags t ON dt.tag_id = t.id
       `;
@@ -26,13 +27,18 @@ class DigitalCollection {
           dc.file_url,
           dc.file_type,
           dc.file_size,
+          dc.kind,
+          dc.external_url,
           dc.location_id,
+          dc.twin_city_id,
           dc.created_at,
           dc.updated_at,
           l.name as location_name,
+          CONCAT(tc.cityA_name, ' - ', tc.cityB_name) as twin_city_name,
           GROUP_CONCAT(DISTINCT t.name) as tags
         FROM digital_collection dc
-        JOIN locations l ON dc.location_id = l.id
+        LEFT JOIN locations l ON dc.location_id = l.id
+        LEFT JOIN twin_cities tc ON dc.twin_city_id = tc.id
         LEFT JOIN document_tags dt ON dc.id = dt.document_id
         LEFT JOIN tags t ON dt.tag_id = t.id
       `;
@@ -50,6 +56,11 @@ class DigitalCollection {
         params.push(filters.location_id);
       }
 
+      if (filters.twin_city_id && filters.twin_city_id !== '') {
+        whereConditions.push('dc.twin_city_id = ?');
+        params.push(filters.twin_city_id);
+      }
+
       if (filters.search && filters.search !== '') {
         whereConditions.push('(dc.title LIKE ? OR dc.author LIKE ? OR t.name LIKE ?)');
         const searchTerm = `%${filters.search}%`;
@@ -64,7 +75,7 @@ class DigitalCollection {
       }
 
       // Adicionar GROUP BY à query principal
-      query += ' GROUP BY dc.id, dc.title, dc.author, dc.publication_year, dc.category, dc.file_url, dc.file_type, dc.file_size, dc.location_id, dc.created_at, dc.updated_at, l.name';
+      query += ' GROUP BY dc.id, dc.title, dc.author, dc.publication_year, dc.category, dc.file_url, dc.file_type, dc.file_size, dc.kind, dc.external_url, dc.location_id, dc.twin_city_id, dc.created_at, dc.updated_at, l.name, twin_city_name';
 
       // Adicionar ORDER BY
       query += ' ORDER BY dc.created_at DESC';
@@ -114,9 +125,14 @@ class DigitalCollection {
   static async findById(id) {
     try {
       const [rows] = await db.query(`
-        SELECT dc.*, l.name as location_name, GROUP_CONCAT(t.name) as tags
+        SELECT 
+          dc.*, 
+          l.name as location_name, 
+          CONCAT(tc.cityA_name, ' - ', tc.cityB_name) as twin_city_name,
+          GROUP_CONCAT(t.name) as tags
         FROM digital_collection dc
-        JOIN locations l ON dc.location_id = l.id
+        LEFT JOIN locations l ON dc.location_id = l.id
+        LEFT JOIN twin_cities tc ON dc.twin_city_id = tc.id
         LEFT JOIN document_tags dt ON dc.id = dt.document_id
         LEFT JOIN tags t ON dt.tag_id = t.id
         WHERE dc.id = ?
@@ -156,29 +172,66 @@ class DigitalCollection {
     }
   }
 
+  static async findByTwinCityId(twinCityId) {
+    try {
+      const [rows] = await db.query(`
+        SELECT 
+          dc.*, 
+          l.name as location_name, 
+          CONCAT(tc.cityA_name, ' - ', tc.cityB_name) as twin_city_name,
+          GROUP_CONCAT(t.name) as tags
+        FROM digital_collection dc
+        LEFT JOIN locations l ON dc.location_id = l.id
+        LEFT JOIN twin_cities tc ON dc.twin_city_id = tc.id
+        LEFT JOIN document_tags dt ON dc.id = dt.document_id
+        LEFT JOIN tags t ON dt.tag_id = t.id
+        WHERE dc.twin_city_id = ?
+        GROUP BY dc.id
+      `, [twinCityId]);
+
+      return rows.map(row => ({
+        ...row,
+        tags: row.tags ? row.tags.split(',') : []
+      }));
+    } catch (error) {
+      throw error;
+    }
+  }
+
   static async create(documentData, tags = []) {
     const conn = await db.getConnection();
     try {
       await conn.beginTransaction();
 
-      // Verificar se a localidade existe
-      const [location] = await conn.query('SELECT id FROM locations WHERE id = ?', [documentData.location_id]);
-      if (location.length === 0) {
-        throw new Error('Localidade não encontrada');
+      // Verificar se a cidade gêmea existe
+      if (documentData.twin_city_id) {
+        const [twinCity] = await conn.query('SELECT id FROM twin_cities WHERE id = ?', [documentData.twin_city_id]);
+        if (twinCity.length === 0) {
+          throw new Error('Cidade gêmea não encontrada');
+        }
+      } else {
+        throw new Error('É necessário fornecer twin_city_id');
       }
 
       // Inserir documento
       const [result] = await conn.query(
-        'INSERT INTO digital_collection (title, author, publication_year, category, file_url, file_type, file_size, location_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        `INSERT INTO digital_collection (
+          title, author, publication_year, category, 
+          file_url, file_type, file_size, 
+          kind, external_url,
+          twin_city_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           documentData.title,
           documentData.author,
           documentData.publication_year,
           documentData.category,
-          documentData.file_url,
-          documentData.file_type,
-          documentData.file_size,
-          documentData.location_id
+          documentData.kind === 'external' ? '' : (documentData.file_url || null),
+          documentData.file_type || null,
+          documentData.kind === 'external' ? 0 : (documentData.file_size || null),
+          documentData.kind || 'internal',
+          documentData.external_url || null,
+          documentData.twin_city_id || null
         ]
       );
 
@@ -216,27 +269,51 @@ class DigitalCollection {
     try {
       await conn.beginTransaction();
 
-      // Verificar se a localidade existe
-      const [location] = await conn.query('SELECT id FROM locations WHERE id = ?', [documentData.location_id]);
-      if (location.length === 0) {
-        throw new Error('Localidade não encontrada');
+      // Verificar se a cidade gêmea existe
+      if (documentData.twin_city_id) {
+        const [twinCity] = await conn.query('SELECT id FROM twin_cities WHERE id = ?', [documentData.twin_city_id]);
+        if (twinCity.length === 0) {
+          throw new Error('Cidade gêmea não encontrada');
+        }
+      } else {
+        throw new Error('É necessário fornecer twin_city_id');
       }
 
       // Atualizar documento
       await conn.query(
-        'UPDATE digital_collection SET title = ?, author = ?, publication_year = ?, category = ?, file_url = ?, file_type = ?, file_size = ?, location_id = ? WHERE id = ?',
+        `UPDATE digital_collection SET 
+          title = ?, 
+          author = ?, 
+          publication_year = ?, 
+          category = ?, 
+          kind = ?,
+          external_url = ?,
+          twin_city_id = ? 
+        WHERE id = ?`,
         [
           documentData.title,
           documentData.author,
           documentData.publication_year,
           documentData.category,
-          documentData.file_url,
-          documentData.file_type,
-          documentData.file_size,
-          documentData.location_id,
+          documentData.kind || 'internal',
+          documentData.external_url || null,
+          documentData.twin_city_id || null,
           id
         ]
       );
+
+      // Se houver um arquivo novo, atualize os detalhes do arquivo (apenas para documentos internos)
+      if (documentData.file_url && documentData.kind === 'internal') {
+        await conn.query(
+          'UPDATE digital_collection SET file_url = ?, file_type = ?, file_size = ? WHERE id = ?',
+          [
+            documentData.file_url,
+            documentData.file_type,
+            documentData.file_size,
+            id
+          ]
+        );
+      }
 
       // Remover tags antigas
       await conn.query('DELETE FROM document_tags WHERE document_id = ?', [id]);

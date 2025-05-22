@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "multer": "^1.4.5-lts.2",
     "react-globe.gl": "^2.33.2",
     "three": "^0.175.0"
   },

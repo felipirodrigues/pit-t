@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, User, Phone, FileUp, Send, X, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import api, { API_BASE_URL } from '../services/api';
 
 interface FormData {
   name: string;
@@ -23,6 +24,9 @@ const ColaboreConosco = () => {
   });
 
   const [dragActive, setDragActive] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -71,10 +75,50 @@ const ColaboreConosco = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically send the form data to your backend
-    console.log('Form submitted:', formData);
+    setLoading(true);
+    setSuccess(null);
+    setError(null);
+
+    try {
+      const data = new FormData();
+      data.append('name', formData.name);
+      data.append('email', formData.email);
+      data.append('phone', formData.phone);
+      data.append('subject', formData.subject);
+      data.append('message', formData.message);
+      formData.files.forEach((file) => {
+        data.append('files', file);
+      });
+
+      const response = await api.post(
+        '/collaborations',
+        data,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      setSuccess('Colaboração enviada com sucesso!');
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: '',
+        message: '',
+        files: [],
+      });
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error ||
+        'Erro ao enviar colaboração. Tente novamente mais tarde.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -85,6 +129,17 @@ const ColaboreConosco = () => {
           {t('collaborate.description')}
         </p>
       </div>
+
+      {success && (
+        <div className="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-300">
+          {success}
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-300">
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -255,10 +310,13 @@ const ColaboreConosco = () => {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            disabled={loading}
           >
             <Send className="h-5 w-5" />
-            <span>{t('collaborate.form.submit')}</span>
+            <span>
+              {loading ? t('collaborate.form.sending') || 'Enviando...' : t('collaborate.form.submit')}
+            </span>
           </button>
         </div>
       </form>

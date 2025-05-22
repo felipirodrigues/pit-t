@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Users, TrendingUp, GraduationCap, Leaf, Building, DollarSign, BarChart, Percent, Heart, Droplet, Syringe, Activity, Users as UsersIcon, Thermometer, Book, FileText, File, MoreHorizontal, AlertCircle, Globe, Axe, Recycle, Pickaxe } from 'lucide-react';
-import axios from 'axios';
 import Saude from '../images/saude2.png'
 import Populacao from '../images/populacao2.png'
 import Socioeconomico from '../images/socioeconomico2.png'
 import Educacao from '../images/educacao2.png'
 import Ambiente from '../images/ambiente2.png'
-import Ponte from '../images/ponte.jpg'
+import api from '../services/api';
+import axios from 'axios';
 import Oiapoque from '../images/oiapoque.jpg'
 import SaintGeorges from '../images/saintgeorge.jpg'
 
@@ -23,6 +23,18 @@ interface Location {
   twin_city?: string;
 }
 
+// Interface TwinCity para compatibilidade com os dados do Home.tsx
+interface TwinCity {
+  id: number;
+  cityA_name: string;
+  cityA_latitude: number;
+  cityA_longitude: number;
+  cityB_name: string;
+  cityB_latitude: number;
+  cityB_longitude: number;
+  description?: string;
+}
+
 interface Indicator {
   id: number;
   location_id: number;
@@ -31,52 +43,34 @@ interface Indicator {
   value: string;
   unit?: string;
   description?: string;
+  icon?: string | React.ComponentType<any>;
+  date?: string;
+  source?: string;
+  sourceLink?: string;
 }
 
-interface HealthIndicator {
+interface ComparativeIndicator {
   id: number;
   title: string;
-  oiapoque: {
+  cityA: {
     value: string;
     unit: string;
   };
-  saintGeorges: {
+  cityB: {
     value: string;
     unit: string;
   };
   description?: string;
-  icon?: React.ComponentType<any>;
+  icon?: string | React.ComponentType<any>;
+  study_date_start?: string;
+  study_date_end?: string;
+  source_title?: string;
+  source_link?: string;
 }
 
-interface PopulationIndicator {
-  id: number;
-  title: string;
-  oiapoque: {
-    value: string;
-    unit: string;
-  };
-  saintGeorges: {
-    value: string;
-    unit: string;
-  };
-  description?: string;
-  icon?: React.ComponentType<any>;
-}
-
-interface DevelopmentIndicator {
-  id: number;
-  title: string;
-  oiapoque: {
-    value: string;
-    unit: string;
-  };
-  saintGeorges: {
-    value: string;
-    unit: string;
-  };
-  description?: string;
-  icon?: React.ComponentType<any>;
-}
+interface HealthIndicator extends ComparativeIndicator {}
+interface PopulationIndicator extends ComparativeIndicator {}
+interface DevelopmentIndicator extends ComparativeIndicator {}
 
 interface GalleryImage {
   url: string;
@@ -90,449 +84,352 @@ interface Gallery {
   images: GalleryImage[];
 }
 
-// Estilos para animações
-const animationStyles = `
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+// Adicionar função para formatar datas (após as interfaces e antes do componente)
+const extractYear = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  try {
+    // Extrai apenas o ano da data
+    const date = new Date(dateString);
+    return date.getFullYear().toString();
+  } catch (e) {
+    console.error('Erro ao formatar data:', e);
+    return dateString;
   }
-  @keyframes float-slow {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-15px); }
-  }
-  @keyframes float-medium {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
-  .animate-float {
-    animation: float 4s ease-in-out infinite;
-  }
-  .animate-float-slow {
-    animation: float-slow 6s ease-in-out infinite;
-  }
-  .animate-float-medium {
-    animation: float-medium 5s ease-in-out infinite;
-  }
-`;
+};
 
 const LocationDetails = () => {
   const { id } = useParams();
   const { t } = useTranslation();
+  const [twinCity, setTwinCity] = useState<TwinCity | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
   const [indicators, setIndicators] = useState<Indicator[]>([]);
   const [healthIndicators, setHealthIndicators] = useState<HealthIndicator[]>([]);
-  const [activeCategory, setActiveCategory] = useState('saude');
+  const [activeCategory, setActiveCategory] = useState('Saúde');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('livros');
-  const [digitalCollection, setDigitalCollection] = useState<any[]>([]);
+  const [digitalCollection, setDigitalCollection] = useState<{
+    livros: any[];
+    relatorios: any[];
+    artigos: any[];
+    outros: any[];
+  }>({ livros: [], relatorios: [], artigos: [], outros: [] });
   const [galleries, setGalleries] = useState<any[]>([]);
   const [populationIndicators, setPopulationIndicators] = useState<PopulationIndicator[]>([]);
   const [developmentIndicators, setDevelopmentIndicators] = useState<DevelopmentIndicator[]>([]);
+  const [educationIndicators, setEducationIndicators] = useState<ComparativeIndicator[]>([]);
+  const [environmentIndicators, setEnvironmentIndicators] = useState<ComparativeIndicator[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchLocationData = async () => {
       try {
         setLoading(true);
-        const [locationResponse, indicatorsResponse, collectionResponse, galleriesResponse] = await Promise.all([
-          axios.get(`http://localhost:3000/api/locations/${id}`),
-          axios.get(`http://localhost:3000/api/indicators?location_id=${id}`),
-          axios.get(`http://localhost:3000/api/digital-collection?location_id=${id}`),
-          axios.get(`http://localhost:3000/api/galleries?location_id=${id}`)
-        ]);
-
-        console.log('Digital Collection Response:', collectionResponse.data);
-
-        setLocation(locationResponse.data);
-        const locationIndicators = indicatorsResponse.data.filter(
-          (indicator: Indicator) => indicator.location_id === Number(id)
-        );
-        setIndicators(locationIndicators);
-        setDigitalCollection(collectionResponse.data);
-        setGalleries(galleriesResponse.data);
+        setError(null);
         
-        // Conjunto de dados mockados para indicadores de saúde comparativos
-        setHealthIndicators([
-          {
-            id: 1,
-            title: "Taxa de Mortalidade Infantil",
-            oiapoque: {
-              value: "14.2",
-              unit: "por mil nascidos vivos"
-            },
-            saintGeorges: {
-              value: "8.4",
-              unit: "por mil nascidos vivos"
-            },
-            description: "Dados de 2018-2022",
-            icon: Thermometer
-          },
-          {
-            id: 2,
-            title: "Leitos Hospitalares Disponíveis",
-            oiapoque: {
-              value: "2.3",
-              unit: "por 1000 hab."
-            },
-            saintGeorges: {
-              value: "3.5",
-              unit: "por 1000 hab."
-            },
-            icon: Building
-          },
-          {
-            id: 3,
-            title: "Cobertura Vacinal",
-            oiapoque: {
-              value: "78",
-              unit: "%"
-            },
-            saintGeorges: {
-              value: "92",
-              unit: "%"
-            },
-            icon: Syringe
-          },
-          {
-            id: 4,
-            title: "Acesso a Água",
-            oiapoque: {
-              value: "82",
-              unit: "%"
-            },
-            saintGeorges: {
-              value: "96",
-              unit: "%"
-            },
-            icon: Droplet
-          },
-          {
-            id: 5,
-            title: "Expectativa de Vida",
-            oiapoque: {
-              value: "72.5",
-              unit: "anos"
-            },
-            saintGeorges: {
-              value: "76.8",
-              unit: "anos"
-            },
-            description: "Entre 2019 e 2022",
-            icon: Activity
-          },
-          {
-            id: 6,
-            title: "População Atendida com Esgoto",
-            oiapoque: {
-              value: "45",
-              unit: "%"
-            },
-            saintGeorges: {
-              value: "82",
-              unit: "%"
-            },
-            icon: Droplet
-          },
-          {
-            id: 7,
-            title: "Casos de HIV/AIDS",
-            oiapoque: {
-              value: "32.6",
-              unit: "por 100.000 hab."
-            },
-            saintGeorges: {
-              value: "24.8",
-              unit: "por 100.000 hab."
-            },
-            icon: Heart
-          },
-          {
-            id: 8,
-            title: "Relação Médico/Habitante",
-            oiapoque: {
-              value: "1.2",
-              unit: "por 1000 hab."
-            },
-            saintGeorges: {
-              value: "2.8",
-              unit: "por 1000 hab."
-            },
-            description: "Dados de 2022",
-            icon: UsersIcon
-          }
-        ]);
-
-        // Conjunto de dados mockados para indicadores populacionais comparativos
-        setPopulationIndicators([
-          {
-            id: 1,
-            title: "População Total",
-            oiapoque: {
-              value: "27.270",
-              unit: "mil/hab"
-            },
-            saintGeorges: {
-              value: "4.186",
-              unit: "mil/hab"
-            },
-            description: "Dados de 2020",
-            icon: Users
-          },
-          {
-            id: 2,
-            title: "Densidade Demográfica",
-            oiapoque: {
-              value: "1.2",
-              unit: "hab/km²"
-            },
-            saintGeorges: {
-              value: "1.45",
-              unit: "hab/km²"
-            },
-            icon: MapPin
-          },
-          {
-            id: 3,
-            title: "Taxa de Crescimento",
-            oiapoque: {
-              value: "1.8",
-              unit: "%"
-            },
-            saintGeorges: {
-              value: "0.9",
-              unit: "%"
-            },
-            icon: TrendingUp
-          },
-          {
-            id: 4,
-            title: "Taxa de Natalidade",
-            oiapoque: {
-              value: "15.7",
-              unit: "por mil hab"
-            },
-            saintGeorges: {
-              value: "12.3",
-              unit: "por mil hab"
-            },
-            description: "Nascidos vivos por mil hab (2018)",
-            icon: Heart
-          }
-        ]);
-
-        // Conjunto de dados mockados para indicadores de desenvolvimento comparativos
-        setDevelopmentIndicators([
-          {
-            id: 1,
-            title: "PIB per capita",
-            oiapoque: {
-              value: "12.500",
-              unit: "R$"
-            },
-            saintGeorges: {
-              value: "15.300",
-              unit: "€"
-            },
-            description: "Dados de 2021",
-            icon: DollarSign
-          },
-          {
-            id: 2,
-            title: "IDHM",
-            oiapoque: {
-              value: "0.658",
-              unit: ""
-            },
-            saintGeorges: {
-              value: "0.712",
-              unit: ""
-            },
-            description: "Índice de Desenvolvimento Humano Municipal",
-            icon: BarChart
-          },
-          {
-            id: 3,
-            title: "Taxa de Desemprego",
-            oiapoque: {
-              value: "12.3",
-              unit: "%"
-            },
-            saintGeorges: {
-              value: "8.7",
-              unit: "%"
-            },
-            icon: Users
-          },
-          {
-            id: 4,
-            title: "Segurança Pública",
-            oiapoque: {
-              value: "32.8",
-              unit: "ocorrências/mil hab"
-            },
-            saintGeorges: {
-              value: "24.1",
-              unit: "ocorrências/mil hab"
-            },
-            description: "Taxa de criminalidade por mil habitantes",
-            icon: AlertCircle
-          }
-        ]);
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
+        // Buscar dados da cidade gêmea
+        const twinCityResponse = await api.get(`/twin-cities/${id}`);
+        const twinCityData = twinCityResponse.data;
         
-        // Dados mockados para demonstração
+        if (!twinCityData) {
+          throw new Error('Não foi possível obter dados da cidade gêmea');
+        }
+        
+        setTwinCity(twinCityData);
+        
+        // Configurar dados do location baseado nos dados da cidade gêmea
         setLocation({
           id: Number(id),
-          name: "Oiapoque",
-          twin_city: "Saint-Georges",
-          description: "Cidade localizada na fronteira do Brasil com a Guiana Francesa",
-          latitude: 3.8404,
-          longitude: -51.8433,
-          country: "Brasil",
-          image_url: "/images/oiapoque-bridge.jpg"
+          name: twinCityData.cityA_name,
+          twin_city: twinCityData.cityB_name,
+          description: twinCityData.description || "Cidades gêmeas na fronteira",
+          latitude: twinCityData.cityA_latitude,
+          longitude: twinCityData.cityA_longitude,
+          country: "Brasil"
         });
+
+        // Buscar indicadores da API /indicators usando twin_city_id
+        const indicatorsResponse = await api.get(`/indicators?twin_city_id=${id}`);
         
-        setIndicators([
-          // Desenvolvimento
-          { id: 1, location_id: Number(id), category: "desenvolvimento", title: "PIB per capita", value: "12.500", unit: "R$" },
-          { id: 2, location_id: Number(id), category: "desenvolvimento", title: "Taxa de emprego", value: "68", unit: "%" },
-          { id: 3, location_id: Number(id), category: "desenvolvimento", title: "Índice de Gini", value: "0.54", unit: "" },
-          { id: 4, location_id: Number(id), category: "desenvolvimento", title: "Renda média", value: "1.850", unit: "R$" },
+        if (indicatorsResponse.data && Array.isArray(indicatorsResponse.data)) {
+          // Separar indicadores por categoria
+          const allIndicators = indicatorsResponse.data;
           
-          // Saúde
-          { id: 5, location_id: Number(id), category: "saude", title: "Expectativa de vida", value: "72.5", unit: "anos" },
-          { id: 6, location_id: Number(id), category: "saude", title: "Mortalidade infantil", value: "14.2", unit: "por 1000" },
-          { id: 7, location_id: Number(id), category: "saude", title: "Leitos hospitalares", value: "2.3", unit: "por 1000 hab." },
+          // Função auxiliar para comparação de categorias ignorando case e acentuação
+          const matchCategory = (indicatorCategory: string, targetCategory: string) => {
+            if (!indicatorCategory) return false;
+            
+            // Normaliza removendo acentos e convertendo para minúsculas
+            const normalize = (text: string) => text.toLowerCase()
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            const normalizedIndicator = normalize(indicatorCategory);
+            const normalizedTarget = normalize(targetCategory);
+            
+            return normalizedIndicator === normalizedTarget;
+          };
           
-          // População
-          { id: 8, location_id: Number(id), category: "populacao", title: "Total", value: "27.270", unit: "habitantes" },
-          { id: 9, location_id: Number(id), category: "populacao", title: "Densidade", value: "1.2", unit: "hab/km²" },
-          { id: 10, location_id: Number(id), category: "populacao", title: "Crescimento anual", value: "1.8", unit: "%" },
+          // Indicadores de saúde
+          const healthIndicators = allIndicators
+            .filter(indicator => matchCategory(indicator.category, 'Saúde'))
+            .map(indicator => ({
+              id: indicator.id,
+              title: indicator.title,
+              description: indicator.description || '',
+              cityA: {
+                value: indicator.city_a_value || '0',
+                unit: indicator.unit || ''
+              },
+              cityB: {
+                value: indicator.city_b_value || '0',
+                unit: indicator.unit || ''
+              },
+              icon: getIconByName(indicator.icon),
+              study_date_start: indicator.study_date_start || '',
+              study_date_end: indicator.study_date_end || '',
+              source_title: indicator.source_title || '',
+              source_link: indicator.source_link || ''
+            }));
           
-          // Educação
-          { id: 11, location_id: Number(id), category: "educacao", title: "Alfabetização", value: "91.4", unit: "%" },
-          { id: 12, location_id: Number(id), category: "educacao", title: "Escolarização", value: "95.2", unit: "%" },
-          { id: 13, location_id: Number(id), category: "educacao", title: "Ensino superior", value: "12.6", unit: "%" },
+          // Indicadores de população
+          const populationIndicators = allIndicators
+            .filter(indicator => matchCategory(indicator.category, 'População'))
+            .map(indicator => ({
+              id: indicator.id,
+              title: indicator.title,
+              description: indicator.description || '',
+              cityA: {
+                value: indicator.city_a_value || '0',
+                unit: indicator.unit || ''
+              },
+              cityB: {
+                value: indicator.city_b_value || '0',
+                unit: indicator.unit || ''
+              },
+              icon: getIconByName(indicator.icon),
+              study_date_start: indicator.study_date_start || '',
+              study_date_end: indicator.study_date_end || '',
+              source_title: indicator.source_title || '',
+              source_link: indicator.source_link || ''
+            }));
           
-          // Meio ambiente
-          { id: 14, location_id: Number(id), category: "meio_ambiente", title: "Área verde", value: "68", unit: "%" },
-          { id: 15, location_id: Number(id), category: "meio_ambiente", title: "Saneamento", value: "42.7", unit: "%" },
-          { id: 16, location_id: Number(id), category: "meio_ambiente", title: "Coleta de resíduos", value: "85.3", unit: "%" }
-        ]);
+          // Indicadores de desenvolvimento
+          const developmentIndicators = allIndicators
+            .filter(indicator => matchCategory(indicator.category, 'Comércio'))
+            .map(indicator => ({
+              id: indicator.id,
+              title: indicator.title,
+              description: indicator.description || '',
+              cityA: {
+                value: indicator.city_a_value || '0',
+                unit: indicator.unit || ''
+              },
+              cityB: {
+                value: indicator.city_b_value || '0',
+                unit: indicator.unit || ''
+              },
+              icon: getIconByName(indicator.icon),
+              study_date_start: indicator.study_date_start || '',
+              study_date_end: indicator.study_date_end || '',
+              source_title: indicator.source_title || '',
+              source_link: indicator.source_link || ''
+            }));
+          
+          // Indicadores de educação
+          const educationIndicators = allIndicators
+            .filter(indicator => matchCategory(indicator.category, 'Educação'))
+            .map(indicator => ({
+              id: indicator.id,
+              title: indicator.title,
+              description: indicator.description || '',
+              cityA: {
+                value: indicator.city_a_value || '0',
+                unit: indicator.unit || ''
+              },
+              cityB: {
+                value: indicator.city_b_value || '0',
+                unit: indicator.unit || ''
+              },
+              icon: getIconByName(indicator.icon),
+              study_date_start: indicator.study_date_start || '',
+              study_date_end: indicator.study_date_end || '',
+              source_title: indicator.source_title || '',
+              source_link: indicator.source_link || ''
+            }));
+          
+          // Indicadores de meio ambiente
+          const environmentIndicators = allIndicators
+            .filter(indicator => matchCategory(indicator.category, 'Meio Ambiente'))
+            .map(indicator => ({
+              id: indicator.id,
+              title: indicator.title,
+              description: indicator.description || '',
+              cityA: {
+                value: indicator.city_a_value || '0',
+                unit: indicator.unit || ''
+              },
+              cityB: {
+                value: indicator.city_b_value || '0',
+                unit: indicator.unit || ''
+              },
+              icon: getIconByName(indicator.icon),
+              study_date_start: indicator.study_date_start || '',
+              study_date_end: indicator.study_date_end || '',
+              source_title: indicator.source_title || '',
+              source_link: indicator.source_link || ''
+            }));
+          
+          // Indicadores para exibição normal
+          const regularIndicators = allIndicators.map(indicator => ({
+            id: indicator.id,
+            location_id: Number(id),
+            category: indicator.category,
+            title: indicator.title,
+            value: indicator.city_a_value || '0',
+            unit: indicator.unit || '',
+            description: indicator.description || '',
+            icon: getIconByName(indicator.icon),
+            study_date_start: indicator.study_date_start || '',
+            study_date_end: indicator.study_date_end || '',
+            source_title: indicator.source_title || '',
+            source_link: indicator.source_link || ''
+          }));
+          
+          // Atualizar os estados
+          setIndicators(regularIndicators);
+          setHealthIndicators(healthIndicators);
+          setPopulationIndicators(populationIndicators);
+          setDevelopmentIndicators(developmentIndicators);
+          setEducationIndicators(educationIndicators);
+          setEnvironmentIndicators(environmentIndicators);
+        } else {
+          // Se não houver dados de indicadores, inicializar arrays vazios
+          setIndicators([]);
+          setHealthIndicators([]);
+          setPopulationIndicators([]);
+          setDevelopmentIndicators([]);
+          setEducationIndicators([]);
+          setEnvironmentIndicators([]);
+          console.warn('Dados de indicadores vazios ou inválidos');
+        }
         
-        // Conjunto de dados mockados para indicadores de saúde comparativos
-        setHealthIndicators([
+        // Buscar acervo digital da API
+        const digitalCollectionResponse = await api.get(`/digital-collection?twin_city_id=${id}&limit=100`);
+        if (digitalCollectionResponse.data && Array.isArray(digitalCollectionResponse.data.documents)) {
+          // Separar por categoria
+          const docs = digitalCollectionResponse.data.documents;
+          setDigitalCollection({
+            livros: docs.filter((d: any) => d.category && d.category.toLowerCase() === 'books'),
+            relatorios: docs.filter((d: any) => d.category && d.category.toLowerCase() === 'reports'),
+            artigos: docs.filter((d: any) => d.category && d.category.toLowerCase() === 'articles'),
+            outros: docs.filter((d: any) => d.category && d.category.toLowerCase() === 'others')
+          });
+        } else {
+          setDigitalCollection({ livros: [], relatorios: [], artigos: [], outros: [] });
+        }
+        
+        // Buscar outros dados da API (digital collection, galleries, etc.)
+        setGalleries([
           {
             id: 1,
-            title: "Taxa de Mortalidade Infantil",
-            oiapoque: {
-              value: "14.2",
-              unit: "por mil nascidos vivos"
-            },
-            saintGeorges: {
-              value: "8.4",
-              unit: "por mil nascidos vivos"
-            },
-            description: "Dados de 2018-2022",
-            icon: Thermometer
+            title: `Galeria ${twinCityData.cityA_name}`,
+            description: `Imagens da cidade de ${twinCityData.cityA_name}`,
+            images: []
           },
           {
             id: 2,
-            title: "Leitos Hospitalares Disponíveis",
-            oiapoque: {
-              value: "2.3",
-              unit: "por 1000 hab."
-            },
-            saintGeorges: {
-              value: "3.5",
-              unit: "por 1000 hab."
-            },
-            icon: Building
-          },
-          {
-            id: 3,
-            title: "Cobertura Vacinal",
-            oiapoque: {
-              value: "78",
-              unit: "%"
-            },
-            saintGeorges: {
-              value: "92",
-              unit: "%"
-            },
-            icon: Syringe
-          },
-          {
-            id: 4,
-            title: "Acesso a Água",
-            oiapoque: {
-              value: "82",
-              unit: "%"
-            },
-            saintGeorges: {
-              value: "96",
-              unit: "%"
-            },
-            icon: Droplet
-          },
-          {
-            id: 5,
-            title: "Expectativa de Vida",
-            oiapoque: {
-              value: "72.5",
-              unit: "anos"
-            },
-            saintGeorges: {
-              value: "76.8",
-              unit: "anos"
-            },
-            description: "Entre 2019 e 2022",
-            icon: Activity
-          },
-          {
-            id: 6,
-            title: "População Atendida com Esgoto",
-            oiapoque: {
-              value: "45",
-              unit: "%"
-            },
-            saintGeorges: {
-              value: "82",
-              unit: "%"
-            },
-            icon: Droplet
-          },
-          {
-            id: 7,
-            title: "Casos de HIV/AIDS",
-            oiapoque: {
-              value: "32.6",
-              unit: "por 100.000 hab."
-            },
-            saintGeorges: {
-              value: "24.8",
-              unit: "por 100.000 hab."
-            },
-            icon: Heart
-          },
-          {
-            id: 8,
-            title: "Relação Médico/Habitante",
-            oiapoque: {
-              value: "1.2",
-              unit: "por 1000 hab."
-            },
-            saintGeorges: {
-              value: "2.8",
-              unit: "por 1000 hab."
-            },
-            description: "Dados de 2022",
-            icon: UsersIcon
+            title: `Galeria ${twinCityData.cityB_name}`,
+            description: `Imagens da comuna de ${twinCityData.cityB_name}`,
+            images: []
           }
         ]);
+        
+      } catch (err: unknown) {
+        console.error('Erro ao carregar dados:', err);
+        
+        // Limpar todos os estados de dados
+        setTwinCity(null);
+        setLocation(null);
+        setIndicators([]);
+        setHealthIndicators([]);
+        setPopulationIndicators([]);
+        setDevelopmentIndicators([]);
+        setEducationIndicators([]);
+        setEnvironmentIndicators([]);
+        setGalleries([]);
+        setDigitalCollection({ livros: [], relatorios: [], artigos: [], outros: [] });
+        
+        // Definir mensagem de erro apropriada
+        if (axios.isAxiosError(err)) {
+          if (err.code === 'ECONNREFUSED' || err.code === 'ERR_NETWORK') {
+            setError('Não foi possível conectar ao servidor. Verifique se a API está em execução.');
+          } else if (err.response) {
+            if (err.response.status === 404) {
+              setError(`Não foram encontrados dados para a cidade com ID ${id}.`);
+            } else {
+              setError(`Erro do servidor: ${err.response.status} - ${err.response.statusText}`);
+            }
+          } else {
+            setError('Erro de conexão com o servidor.');
+          }
+        } else if (err instanceof Error) {
+          setError(`Erro: ${err.message}`);
+        } else {
+          setError('Ocorreu um erro desconhecido ao carregar os dados.');
+        }
       } finally {
         setLoading(false);
       }
+    };
+
+    // Auxiliar para converter nome de ícone em componente
+    const getIconByName = (iconName: string | undefined): React.ComponentType<any> => {
+      if (!iconName) return Thermometer; // Ícone padrão
+      
+      // Mapear nomes de ícones para componentes do Lucide
+      const iconMap: { [key: string]: React.ComponentType<any> } = {
+        // Saúde
+        'thermometer': Thermometer,
+        'heart': Heart,
+        'activity': Activity,
+        'syringe': Syringe,
+        'droplet': Droplet,
+        
+        // População e demografia
+        'users': Users,
+        'map-pin': MapPin,
+        
+        // Desenvolvimento e economia
+        'building': Building,
+        'trending-up': TrendingUp,
+        'dollar-sign': DollarSign,
+        'bar-chart': BarChart,
+        'percent': Percent,
+        
+        // Educação
+        'graduation-cap': GraduationCap,
+        'book': Book,
+        'globe': Globe,
+        
+        // Meio ambiente
+        'leaf': Leaf,
+        'axe': Axe,
+        'recycle': Recycle,
+        'pickaxe': Pickaxe,
+        
+        // Geral
+        'file-text': FileText,
+        'file': File,
+        'alert-circle': AlertCircle
+      };
+      
+      // Converter para minúsculas e remover espaços
+      const normalizedName = iconName.toLowerCase().replace(/\s+/g, '-');
+      
+      // Verificar se o ícone está no mapa, caso contrário retornar o ícone padrão
+      return iconMap[normalizedName] || Thermometer;
     };
 
     if (id) {
@@ -541,11 +438,11 @@ const LocationDetails = () => {
   }, [id]);
 
   const categories = [
-    { id: 'saude', label: 'Saúde', icon: MapPin },
-    { id: 'populacao', label: 'População', icon: Users },
-    { id: 'desenvolvimento', label: 'Desenvolvimento', icon: TrendingUp },
-    { id: 'educacao', label: 'Educação', icon: GraduationCap },
-    { id: 'meio_ambiente', label: 'Meio ambiente', icon: Leaf }
+    { id: 'Saúde', label: t('locationDetails.categories.health'), icon: MapPin },
+    { id: 'População', label: t('locationDetails.categories.population'), icon: Users },
+    { id: 'Comércio', label: t('locationDetails.categories.commerce'), icon: TrendingUp },
+    { id: 'Educação', label: t('locationDetails.categories.education'), icon: GraduationCap },
+    { id: 'Meio Ambiente', label: t('locationDetails.categories.environment'), icon: Leaf }
   ];
 
   const getIconForIndicator = (title: string) => {
@@ -556,744 +453,592 @@ const LocationDetails = () => {
     return Building;
   };
 
+  // Adicionar função para normalizar categorias
+  const normalizeCategory = (category: string) => {
+    if (!category) return '';
+    
+    // Normaliza removendo acentos e convertendo para minúsculas
+    const normalize = (text: string) => text.toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    const normalizedInput = normalize(category);
+    
+    // Mapeamento de categorias padronizadas
+    const categoryMap: { [key: string]: string } = {
+      'saude': 'Saúde',
+      'populacao': 'População',
+      'comercio': 'Comércio',
+      'educacao': 'Educação',
+      'meio ambiente': 'Meio Ambiente',
+      'meio_ambiente': 'Meio Ambiente'
+    };
+    
+    // Retorna a categoria padronizada ou a original se não encontrada
+    return categoryMap[normalizedInput] || category;
+  };
+
+  // Filtrar indicadores usando a normalização de categorias
   const filteredIndicators = indicators.filter(
-    indicator => indicator.category === activeCategory
+    indicator => {
+      const normalizedActiveCategory = normalizeCategory(activeCategory);
+      return indicator.category === normalizedActiveCategory || 
+        indicator.category.toLowerCase() === activeCategory.toLowerCase();
+    }
   );
 
-  const renderCategoryContent = () => {
-    if (activeCategory === 'saude') {
+  // Adicionar função auxiliar para traduzir categorias
+  const translateCategory = (category: string): string => {
+    const categoryMap: { [key: string]: string } = {
+      'books': 'Livros',
+      'reports': 'Relatórios',
+      'articles': 'Artigos',
+      'others': 'Outros'
+    };
+    return categoryMap[category.toLowerCase()] || category;
+  };
+
+  // Função para renderizar um card genérico com cor personalizada (para população, desenvolvimento, etc.)
+  const renderGenericCard = (indicator: ComparativeIndicator, color: 'blue' | 'amber' | 'emerald' | 'teal') => {
+    if (!indicator) return null;
+    
+    // Determinar o componente de ícone
+    const IconComponent = indicator.icon && typeof indicator.icon !== 'string' 
+      ? indicator.icon 
+      : Heart;
+    
+    // Calcular a diferença percentual entre os valores (quando possível)
+    let difference = null;
+    if (!isNaN(Number(indicator.cityA.value)) && !isNaN(Number(indicator.cityB.value))) {
+      const value1 = Number(indicator.cityA.value);
+      const value2 = Number(indicator.cityB.value);
+      if (value1 > 0 && value2 > 0) {
+        difference = ((value2 - value1) / value1) * 100;
+      }
+    }
+    
+    // Nomes das cidades
+    const cityA = twinCity?.cityA_name || 'Cidade A';
+    const cityB = twinCity?.cityB_name || 'Cidade B';
+    
+    // Classes baseadas na cor
+    const textColor = `text-${color}-800`;
+    const bgColor = `bg-${color}-500`;
+    const borderColor = `border-${color}-100`;
+    const descriptionColor = `text-${color}-600`;
+    
+    // Extrair anos das datas de estudo
+    const yearStart = extractYear(indicator.study_date_start || '');
+    const yearEnd = extractYear(indicator.study_date_end || '');
+    
+    // Formatar período
+    const periodText = yearStart 
+      ? (yearEnd && yearStart !== yearEnd) 
+        ? `${yearStart} - ${yearEnd}` 
+        : yearStart
+      : '';
+    
     return (
+      <div 
+        className={`bg-white/90 backdrop-blur-sm rounded-xl shadow-md border ${borderColor} p-3 sm:p-4 h-full transform transition-transform duration-300 hover:scale-105`}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <h3 className={`text-sm sm:text-base font-medium ${textColor}`}>
+            {indicator.title}
+          </h3>
+          <div className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center ${bgColor} rounded-full text-white`}>
+            <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </div>
+        </div>
+        
+        {/* Data e fonte com melhor formatação */}
+        {(periodText || indicator.source_title) && (
+          <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 text-xs ${descriptionColor} border-b ${borderColor} pb-2`}>
+            {periodText && (
+              <div className="flex items-center mb-1 sm:mb-0">
+                <span className="mr-1 opacity-70">Período:</span>
+                <span>{periodText}</span>
+              </div>
+            )}
+            {indicator.source_title && (
+              <a 
+                href={indicator.source_link || '#'}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={`flex items-center hover:${textColor} transition-colors`}
+              >
+                <FileText className="w-3 h-3 mr-1" />
+                <span className="underline truncate max-w-[150px] sm:max-w-none">{indicator.source_title}</span>
+              </a>
+            )}
+          </div>
+        )}
+        
+        {indicator.description && (
+          <p className={`text-xs ${descriptionColor} mb-2 line-clamp-2 sm:line-clamp-none`}>{indicator.description}</p>
+        )}
+        
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={`w-2 h-2 rounded-full bg-${color}-600 mr-1`}></div>
+              <span className={`text-xs font-medium ${descriptionColor}`}>{cityA}</span>
+            </div>
+            <span className={`text-sm font-bold ${textColor}`}>
+              {indicator.cityA.value}
+              <span className={`text-xs ml-1 ${descriptionColor}`}>{indicator.cityA.unit}</span>
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={`w-2 h-2 rounded-full bg-${color}-400 mr-1`}></div>
+              <span className={`text-xs font-medium ${descriptionColor}`}>{cityB}</span>
+            </div>
+            <span className={`text-sm font-bold ${textColor}`}>
+              {indicator.cityB.value}
+              <span className={`text-xs ml-1 ${descriptionColor}`}>{indicator.cityB.unit}</span>
+            </span>
+          </div>
+          
+          {difference !== null && (
+            <div className={`text-xs font-medium px-2 py-1 rounded-full text-center ${difference > 0 ? `bg-${color}-100 ${descriptionColor}` : 'bg-red-100 text-red-700'}`}>
+              {difference > 0 
+                ? `${Math.abs(difference).toFixed(1)}% menor em ${cityA}` 
+                : `${Math.abs(difference).toFixed(1)}% maior em ${cityA}`}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCategoryContent = () => {
+    // Nomes das cidades para uso nos cards
+    const cityA = twinCity?.cityA_name || 'Cidade A';
+    const cityB = twinCity?.cityB_name || 'Cidade B';
+    
+    if (activeCategory === 'Saúde') {
+      return (
         <div className="relative">
           {/* Container principal com fundo gradiente */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-8">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 min-h-[500px] sm:min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-6 sm:py-8">
             {/* Título da seção */}
-            <h2 className="text-4xl font-bold text-green-800 text-center mb-8">
-              Saúde
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-800 text-center mb-4 sm:mb-8">
+              {t('locationDetails.categoryTitles.health')}
             </h2>
             
             {/* Container para a imagem 3D central e cards ao redor */}
-            <div className="relative flex justify-center">
-              {/* Imagem 3D central */}
-              <div className="absolute inset-0 z-10 flex justify-center items-center pointer-events-none">
+            <div className="relative justify-center">
+              {/* Imagem 3D central - escondida em mobile, visível em desktop */}
+              <div className="absolute inset-0 z-10 hidden sm:flex justify-center items-center pointer-events-none">
                 <img 
                   src={Saude} 
                   alt="Representação 3D do setor de saúde" 
-                  className="h-[550px] object-contain"
+                  className="h-[300px] md:h-[550px] object-contain"
                 />
               </div>
               
-              {/* Grid de cards ao redor da imagem */}
-              <div className="grid grid-cols-3 grid-rows-3 gap-5 z-20 w-full max-w-6xl mx-auto">
-                {/* Primeira linha */}
-                <div className="col-span-1">{renderHealthCard(healthIndicators[0])}</div>
-                <div className="col-span-1"></div> {/* Espaço para imagem */}
-                <div className="col-span-1">{renderHealthCard(healthIndicators[1])}</div>
+              {/* Mobile: sistema de cards expandíveis */}
+              {healthIndicators.length > 0 ? (
+                <div className="sm:hidden w-full px-1">
+                  <div className="space-y-3">
+                    {healthIndicators.slice(0, 8).map((indicator, index) => (
+                      <div key={indicator?.id || index}>
+                        {renderCompactHealthCard(indicator)}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Botão "ver mais" se houver mais de 8 indicadores */}
+                  {healthIndicators.length > 8 && (
+                    <div className="mt-4 flex justify-center">
+                      <button className="bg-white text-green-700 border border-green-200 rounded-lg px-4 py-2 flex items-center gap-2 shadow-sm">
+                        <MoreHorizontal className="w-4 h-4" />
+                        <span>Ver mais {healthIndicators.length - 8} indicadores</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="sm:hidden w-full">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-green-100 p-6">
+                    <p className="text-green-800 text-center">{t('locationDetails.noData.health')}</p>
+                  </div>
+                </div>
+              )}
 
-                {/* Segunda linha */}
-                <div className="col-span-1">{renderHealthCard(healthIndicators[2])}</div>
-                <div className="col-span-1"></div> {/* Espaço para imagem */}
-                <div className="col-span-1">{renderHealthCard(healthIndicators[3])}</div>
+              {/* Desktop: grid ao redor da imagem (mantido como estava) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 sm:grid-rows-3 gap-3 sm:gap-5 z-20 w-full max-w-6xl mx-auto">
+                {/* Versão desktop: grid ao redor da imagem */}
+                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[0])}</div>
+                <div className="hidden sm:block col-span-1"></div> {/* Espaço para imagem */}
+                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[1])}</div>
 
-                {/* Terceira linha */}
-                <div className="col-span-1">{renderHealthCard(healthIndicators[4])}</div>
-                <div className="col-span-1">{renderHealthCard(healthIndicators[5])}</div>
-                <div className="col-span-1">{renderHealthCard(healthIndicators[6])}</div>
+                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[2])}</div>
+                <div className="hidden sm:block col-span-1"></div> {/* Espaço para imagem */}
+                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[3])}</div>
+
+                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[4])}</div>
+                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[5])}</div>
+                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[6])}</div>
               </div>
             </div>
-          </div>
-      </div>
-    );
-    } else if (activeCategory === 'populacao') {
-      // Para depuração
-      console.log("Population Indicators:", populationIndicators);
 
-    return (
+            {/* Versão desktop: indicadores adicionais quando há mais de 7 */}
+            {healthIndicators.length > 7 && (
+              <div className="hidden sm:block mt-8">
+                <h3 className="text-xl font-semibold text-green-800 mb-4 text-center">{t('locationDetails.moreIndicators.health')}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {healthIndicators.slice(7).map((indicator, index) => (
+                    <div key={indicator?.id || index + 7}>
+                      {renderHealthCard(indicator)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    } else if (activeCategory === 'População') {
+      return (
         <div className="relative">
           {/* Container principal com fundo gradiente */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 min-h-[500px] sm:min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-6 sm:py-8">
             {/* Título da seção */}
-            <h2 className="text-4xl font-bold text-blue-800 text-center mb-8">
-              População
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-blue-800 text-center mb-4 sm:mb-8">
+              {t('locationDetails.categoryTitles.population')}
             </h2>
             
             {/* Container para a imagem 3D central e cards ao redor */}
-            <div className="relative h-[600px]">
-              {/* Imagem 3D central */}
-              <div className="absolute inset-0 z-10 flex justify-center items-center pointer-events-none">
+            <div className="relative sm:h-[600px]">
+              {/* Imagem 3D central - escondida em mobile */}
+              <div className="absolute inset-0 z-10 hidden sm:flex justify-center items-center pointer-events-none">
                 <img 
                   src={Populacao} 
                   alt="Representação 3D de população" 
-                  className="h-[500px] object-contain"
+                  className="h-[300px] md:h-[500px] object-contain"
                 />
               </div>
               
-              {/* Cards posicionados absolutamente com conteúdo direto */}
-              <div className="absolute top-0 left-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-blue-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-blue-800">
-                      População Total
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-blue-500 rounded-full text-white">
-                      <Users className="w-4 h-4" />
+              {/* Cards dinâmicos baseados nos dados da API */}
+              {populationIndicators.length > 0 ? (
+                <>
+                  {/* Mobile: sistema de cards expandíveis */}
+                  <div className="sm:hidden w-full px-1">
+                    {/* Subcategorias em chips scrolláveis */}
+                    <div className="flex overflow-x-auto pb-2 mb-3 hide-scrollbar">
+                      <button className="flex-shrink-0 bg-blue-500 text-white px-4 py-1 rounded-full mr-2">
+                        Todos
+                      </button>
+                      <button className="flex-shrink-0 bg-white text-blue-700 px-4 py-1 rounded-full mr-2 border border-blue-100">
+                        Demografia
+                      </button>
+                      <button className="flex-shrink-0 bg-white text-blue-700 px-4 py-1 rounded-full mr-2 border border-blue-100">
+                        Crescimento
+                      </button>
+                      <button className="flex-shrink-0 bg-white text-blue-700 px-4 py-1 rounded-full mr-2 border border-blue-100">
+                        Densidade
+                      </button>
                     </div>
+                    
+                    {/* Lista de cards expandíveis */}
+                    <div className="space-y-3">
+                      {populationIndicators.slice(0, 8).map((indicator, index) => (
+                        <div key={indicator?.id || index}>
+                          {renderCompactGenericCard(indicator, 'blue')}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Botão "ver mais" se houver mais de 8 indicadores */}
+                    {populationIndicators.length > 8 && (
+                      <div className="mt-4 flex justify-center">
+                        <button className="bg-white text-blue-700 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-2 shadow-sm">
+                          <MoreHorizontal className="w-4 h-4" />
+                          <span>Ver mais {populationIndicators.length - 8} indicadores</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-blue-600 mb-2">Dados de 2020</p>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-blue-600 mr-1"></div>
-                        <span className="text-xs font-medium text-blue-700">Oiapoque</span>
+                  
+                  {/* Desktop: cards posicionados em pontos específicos (mantido como estava) */}
+                  <div className="hidden sm:block">
+                    {populationIndicators.slice(0, 1).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute top-0 left-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'blue')}
                       </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        27.270<span className="text-xs ml-1 text-blue-600">mil/hab</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-indigo-400 mr-1"></div>
-                        <span className="text-xs font-medium text-blue-700">Saint-Georges</span>
+                    ))}
+                    
+                    {populationIndicators.slice(1, 2).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute top-0 right-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'blue')}
                       </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        4.186<span className="text-xs ml-1 text-blue-600">mil/hab</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-red-100 text-red-700">
-                      84.6% maior em Oiapoque
-                    </div>
+                    ))}
+                    
+                    {populationIndicators.slice(2, 3).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute bottom-0 left-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'blue')}
+                      </div>
+                    ))}
+                    
+                    {populationIndicators.slice(3, 4).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute bottom-0 right-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'blue')}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-              
-              <div className="absolute top-0 right-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-blue-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-blue-800">
-                      Densidade Demográfica
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-blue-500 rounded-full text-white">
-                      <MapPin className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-blue-600 mr-1"></div>
-                        <span className="text-xs font-medium text-blue-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        1.2<span className="text-xs ml-1 text-blue-600">hab/km²</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-indigo-400 mr-1"></div>
-                        <span className="text-xs font-medium text-blue-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        1.45<span className="text-xs ml-1 text-blue-600">hab/km²</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-blue-100 text-blue-700">
-                      20.8% menor em Oiapoque
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-blue-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-blue-800">
-                      Taxa de Crescimento
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-blue-500 rounded-full text-white">
-                      <TrendingUp className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-blue-600 mr-1"></div>
-                        <span className="text-xs font-medium text-blue-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        1.8<span className="text-xs ml-1 text-blue-600">%</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-indigo-400 mr-1"></div>
-                        <span className="text-xs font-medium text-blue-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        0.9<span className="text-xs ml-1 text-blue-600">%</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-red-100 text-red-700">
-                      50.0% maior em Oiapoque
-                    </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-blue-100 p-6">
+                    <p className="text-blue-800 text-center">{t('locationDetails.noData.population')}</p>
                   </div>
                 </div>
-              </div>
-              
-              <div className="absolute bottom-0 right-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-blue-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-blue-800">
-                      Taxa de Natalidade
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-blue-500 rounded-full text-white">
-                      <Heart className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-blue-600 mb-2">Nascidos vivos por mil hab (2018)</p>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-blue-600 mr-1"></div>
-                        <span className="text-xs font-medium text-blue-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        15.7<span className="text-xs ml-1 text-blue-600">por mil hab</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-indigo-400 mr-1"></div>
-                        <span className="text-xs font-medium text-blue-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-blue-800">
-                        12.3<span className="text-xs ml-1 text-blue-600">por mil hab</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-red-100 text-red-700">
-                      21.7% maior em Oiapoque
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
+
+            {/* Versão desktop: indicadores adicionais quando há mais de 4 */}
+            {populationIndicators.length > 4 && (
+              <div className="hidden sm:block mt-8">
+                <h3 className="text-xl font-semibold text-blue-800 mb-4 text-center">{t('locationDetails.moreIndicators.population')}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {populationIndicators.slice(4).map((indicator, index) => (
+                    <div key={indicator?.id || index + 4}>
+                      {renderGenericCard(indicator, 'blue')}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       );
-    } else if (activeCategory === 'desenvolvimento') {
+    } else if (activeCategory === 'Comércio') {
       return (
         <div className="relative">
           {/* Container principal com fundo gradiente */}
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-8">
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 min-h-[500px] sm:min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-6 sm:py-8">
             {/* Título da seção */}
-            <h2 className="text-4xl font-bold text-amber-800 text-center mb-8">
-              Desenvolvimento
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-amber-800 text-center mb-4 sm:mb-8">
+              {t('locationDetails.categoryTitles.commerce')}
             </h2>
             
             {/* Container para a imagem 3D central e cards ao redor */}
-            <div className="relative h-[600px]">
-              {/* Imagem 3D central */}
-              <div className="absolute inset-0 z-10 flex justify-center items-center pointer-events-none">
+            <div className="relative sm:h-[600px]">
+              {/* Imagem 3D central - escondida em mobile */}
+              <div className="absolute inset-0 z-10 hidden sm:flex justify-center items-center pointer-events-none">
                 <img 
                   src={Socioeconomico} 
                   alt="Representação 3D de desenvolvimento socioeconômico" 
-                  className="h-[500px] object-contain"
+                  className="h-[300px] md:h-[500px] object-contain"
                 />
               </div>
               
-              {/* Cards posicionados absolutamente com conteúdo direto */}
-              <div className="absolute top-0 left-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-amber-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-amber-800">
-                      PIB per capita
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-amber-500 rounded-full text-white">
-                      <DollarSign className="w-4 h-4" />
+              {/* Cards dinâmicos baseados nos dados da API */}
+              {developmentIndicators.length > 0 ? (
+                <>
+                  {/* Mobile: cards expandíveis */}
+                  <div className="sm:hidden w-full px-1">
+                    <div className="space-y-3">
+                      {developmentIndicators.map((indicator, index) => (
+                        <div key={indicator.id || index}>
+                          {renderCompactGenericCard(indicator, 'amber')}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <p className="text-xs text-amber-600 mb-2">Dados de 2021</p>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-amber-600 mr-1"></div>
-                        <span className="text-xs font-medium text-amber-700">Oiapoque</span>
+                
+                  {/* Desktop: posicionamento dos cards em pontos específicos */}
+                  <div className="hidden sm:block">
+                    {developmentIndicators.slice(0, 1).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute top-0 left-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'amber')}
                       </div>
-                      <span className="text-sm font-bold text-amber-800">
-                        12.500<span className="text-xs ml-1 text-amber-600">R$</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-amber-400 mr-1"></div>
-                        <span className="text-xs font-medium text-amber-700">Saint-Georges</span>
+                    ))}
+                    
+                    {developmentIndicators.slice(1, 2).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute top-0 right-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'amber')}
                       </div>
-                      <span className="text-sm font-bold text-amber-800">
-                        15.300<span className="text-xs ml-1 text-amber-600">€</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-amber-100 text-amber-700">
-                      22.4% menor em Oiapoque
-                    </div>
+                    ))}
+                    
+                    {developmentIndicators.slice(2, 3).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute bottom-0 left-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'amber')}
+                      </div>
+                    ))}
+                    
+                    {developmentIndicators.slice(3, 4).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute bottom-0 right-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'amber')}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-              
-              <div className="absolute top-0 right-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-amber-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-amber-800">
-                      IDHM
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-amber-500 rounded-full text-white">
-                      <BarChart className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-amber-600 mb-2">Índice de Desenvolvimento Humano Municipal</p>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-amber-600 mr-1"></div>
-                        <span className="text-xs font-medium text-amber-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-amber-800">
-                        0.658
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-amber-400 mr-1"></div>
-                        <span className="text-xs font-medium text-amber-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-amber-800">
-                        0.712
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-amber-100 text-amber-700">
-                      8.2% menor em Oiapoque
-                    </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-amber-100 p-6">
+                    <p className="text-amber-800 text-center">{t('locationDetails.noData.commerce')}</p>
                   </div>
                 </div>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-amber-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-amber-800">
-                      Taxa de Desemprego
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-amber-500 rounded-full text-white">
-                      <Users className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-amber-600 mr-1"></div>
-                        <span className="text-xs font-medium text-amber-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-amber-800">
-                        12.3<span className="text-xs ml-1 text-amber-600">%</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-amber-400 mr-1"></div>
-                        <span className="text-xs font-medium text-amber-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-amber-800">
-                        8.7<span className="text-xs ml-1 text-amber-600">%</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-red-100 text-red-700">
-                      29.3% maior em Oiapoque
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="absolute bottom-0 right-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-amber-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-amber-800">
-                      Segurança Pública
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-amber-500 rounded-full text-white">
-                      <AlertCircle className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-amber-600 mb-2">Taxa de criminalidade por mil habitantes</p>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-amber-600 mr-1"></div>
-                        <span className="text-xs font-medium text-amber-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-amber-800">
-                        32.8<span className="text-xs ml-1 text-amber-600">ocorrências/mil hab</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-amber-400 mr-1"></div>
-                        <span className="text-xs font-medium text-amber-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-amber-800">
-                        24.1<span className="text-xs ml-1 text-amber-600">ocorrências/mil hab</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-red-100 text-red-700">
-                      26.5% maior em Oiapoque
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       );
-    } else if (activeCategory === 'educacao') {
+    } else if (activeCategory === 'Educação') {
       return (
         <div className="relative">
           {/* Container principal com fundo gradiente */}
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-8">
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 min-h-[500px] sm:min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-6 sm:py-8">
             {/* Título da seção */}
-            <h2 className="text-4xl font-bold text-emerald-800 text-center mb-8">
-              Educação
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-emerald-800 text-center mb-4 sm:mb-8">
+              {t('locationDetails.categoryTitles.education')}
             </h2>
             
             {/* Container para a imagem 3D central e cards ao redor */}
-            <div className="relative h-[600px]">
-              {/* Imagem 3D central */}
-              <div className="absolute inset-0 z-10 flex justify-center items-center pointer-events-none">
+            <div className="relative sm:h-[600px]">
+              {/* Imagem 3D central - escondida em mobile */}
+              <div className="absolute inset-0 z-10 hidden sm:flex justify-center items-center pointer-events-none">
                 <img 
                   src={Educacao} 
                   alt="Representação 3D de educação" 
-                  className="h-[500px] object-contain"
+                  className="h-[300px] md:h-[500px] object-contain"
                 />
               </div>
               
-              {/* Cards posicionados absolutamente com conteúdo direto */}
-              <div className="absolute top-0 left-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-emerald-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-emerald-800">
-                      Taxa de Alfabetização
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-emerald-500 rounded-full text-white">
-                      <Book className="w-4 h-4" />
+              {/* Cards dinâmicos baseados nos dados da API */}
+              {educationIndicators.length > 0 ? (
+                <>
+                  {/* Mobile: cards expandíveis */}
+                  <div className="sm:hidden w-full px-1">
+                    <div className="space-y-3">
+                      {educationIndicators.map((indicator, index) => (
+                        <div key={indicator.id || index}>
+                          {renderCompactGenericCard(indicator, 'emerald')}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-600 mr-1"></div>
-                        <span className="text-xs font-medium text-emerald-700">Oiapoque</span>
+                
+                  {/* Desktop: posicionamento dos cards em pontos específicos */}
+                  <div className="hidden sm:block">
+                    {educationIndicators.slice(0, 1).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute top-0 left-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'emerald')}
                       </div>
-                      <span className="text-sm font-bold text-emerald-800">
-                        91.4<span className="text-xs ml-1 text-emerald-600">%</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 mr-1"></div>
-                        <span className="text-xs font-medium text-emerald-700">Saint-Georges</span>
+                    ))}
+                    
+                    {educationIndicators.slice(1, 2).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute top-0 right-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'emerald')}
                       </div>
-                      <span className="text-sm font-bold text-emerald-800">
-                        94.8<span className="text-xs ml-1 text-emerald-600">%</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-emerald-100 text-emerald-700">
-                      3.6% menor em Oiapoque
-                    </div>
+                    ))}
+                    
+                    {/* Mostra cards adicionais apenas se existirem */}
+                    {educationIndicators.slice(2, 3).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute bottom-0 left-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'emerald')}
+                      </div>
+                    ))}
+                    
+                    {educationIndicators.slice(3, 4).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute bottom-0 right-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'emerald')}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-              
-              <div className="absolute top-0 right-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-emerald-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-emerald-800">
-                      Relação Aluno/Professor
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-emerald-500 rounded-full text-white">
-                      <GraduationCap className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-600 mr-1"></div>
-                        <span className="text-xs font-medium text-emerald-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-emerald-800">
-                        24.3<span className="text-xs ml-1 text-emerald-600">alunos/prof</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 mr-1"></div>
-                        <span className="text-xs font-medium text-emerald-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-emerald-800">
-                        18.5<span className="text-xs ml-1 text-emerald-600">alunos/prof</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-red-100 text-red-700">
-                      31.4% maior em Oiapoque
-                    </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-emerald-100 p-6">
+                    <p className="text-emerald-800 text-center">{t('locationDetails.noData.education')}</p>
                   </div>
                 </div>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-emerald-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-emerald-800">
-                      Acesso a Ensino Técnico e Superior
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-emerald-500 rounded-full text-white">
-                      <GraduationCap className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-600 mr-1"></div>
-                        <span className="text-xs font-medium text-emerald-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-emerald-800">
-                        12.6<span className="text-xs ml-1 text-emerald-600">%</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 mr-1"></div>
-                        <span className="text-xs font-medium text-emerald-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-emerald-800">
-                        18.2<span className="text-xs ml-1 text-emerald-600">%</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-emerald-100 text-emerald-700">
-                      30.8% menor em Oiapoque
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="absolute bottom-0 right-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-emerald-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-emerald-800">
-                      Iniciativas Bilíngues
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-emerald-500 rounded-full text-white">
-                      <Globe className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-emerald-600 mb-2">Escolas com programas de ensino bilíngue</p>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-600 mr-1"></div>
-                        <span className="text-xs font-medium text-emerald-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-emerald-800">
-                        2<span className="text-xs ml-1 text-emerald-600">escolas</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-emerald-400 mr-1"></div>
-                        <span className="text-xs font-medium text-emerald-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-emerald-800">
-                        5<span className="text-xs ml-1 text-emerald-600">escolas</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-emerald-100 text-emerald-700">
-                      60% menos escolas em Oiapoque
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       );
-    } else if (activeCategory === 'meio_ambiente') {
+    } else if (activeCategory === 'Meio Ambiente') {
       return (
         <div className="relative">
           {/* Container principal com fundo gradiente */}
-          <div className="bg-gradient-to-br from-teal-50 to-teal-100 min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-8">
+          <div className="bg-gradient-to-br from-teal-50 to-teal-100 min-h-[500px] sm:min-h-[700px] rounded-3xl overflow-hidden relative px-4 py-6 sm:py-8">
             {/* Título da seção */}
-            <h2 className="text-4xl font-bold text-teal-800 text-center mb-8">
-              Meio Ambiente
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-teal-800 text-center mb-4 sm:mb-8">
+              {t('locationDetails.categoryTitles.environment')}
             </h2>
             
             {/* Container para a imagem 3D central e cards ao redor */}
-            <div className="relative h-[600px]">
-              {/* Imagem 3D central */}
-              <div className="absolute inset-0 z-10 flex justify-center items-center pointer-events-none">
+            <div className="relative sm:h-[600px]">
+              {/* Imagem 3D central - escondida em mobile */}
+              <div className="absolute inset-0 z-10 hidden sm:flex justify-center items-center pointer-events-none">
                 <img 
                   src={Ambiente} 
                   alt="Representação 3D de meio ambiente" 
-                  className="h-[500px] object-contain"
+                  className="h-[300px] md:h-[500px] object-contain"
                 />
               </div>
               
-              {/* Cards posicionados absolutamente com conteúdo direto */}
-              <div className="absolute top-0 left-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-teal-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-teal-800">
-                      Áreas Protegidas
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-teal-500 rounded-full text-white">
-                      <Leaf className="w-4 h-4" />
+              {/* Cards dinâmicos baseados nos dados da API */}
+              {environmentIndicators.length > 0 ? (
+                <>
+                  {/* Mobile: cards expandíveis */}
+                  <div className="sm:hidden w-full px-1">
+                    <div className="space-y-3">
+                      {environmentIndicators.map((indicator, index) => (
+                        <div key={indicator.id || index}>
+                          {renderCompactGenericCard(indicator, 'teal')}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-teal-600 mr-1"></div>
-                        <span className="text-xs font-medium text-teal-700">Oiapoque</span>
+                
+                  {/* Desktop: posicionamento dos cards em pontos específicos */}
+                  <div className="hidden sm:block">
+                    {environmentIndicators.slice(0, 1).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute top-0 left-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'teal')}
                       </div>
-                      <span className="text-sm font-bold text-teal-800">
-                        68<span className="text-xs ml-1 text-teal-600">% do território</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-teal-400 mr-1"></div>
-                        <span className="text-xs font-medium text-teal-700">Saint-Georges</span>
+                    ))}
+                    
+                    {environmentIndicators.slice(1, 2).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute top-0 right-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'teal')}
                       </div>
-                      <span className="text-sm font-bold text-teal-800">
-                        78<span className="text-xs ml-1 text-teal-600">% do território</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-teal-100 text-teal-700">
-                      14.7% menor em Oiapoque
-                    </div>
+                    ))}
+                    
+                    {/* Mostra cards adicionais apenas se existirem */}
+                    {environmentIndicators.slice(2, 3).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute bottom-0 left-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'teal')}
+                      </div>
+                    ))}
+                    
+                    {environmentIndicators.slice(3, 4).map((indicator, index) => (
+                      <div key={indicator.id} className="absolute bottom-0 right-0 w-[30%] z-20">
+                        {renderGenericCard(indicator, 'teal')}
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
-              
-              <div className="absolute top-0 right-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-teal-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-teal-800">
-                      Taxa de Desmatamento
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-teal-500 rounded-full text-white">
-                      <Axe className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-teal-600 mb-2">Dados anuais 2020-2022</p>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-teal-600 mr-1"></div>
-                        <span className="text-xs font-medium text-teal-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-teal-800">
-                        0.7<span className="text-xs ml-1 text-teal-600">% ao ano</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-teal-400 mr-1"></div>
-                        <span className="text-xs font-medium text-teal-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-teal-800">
-                        0.3<span className="text-xs ml-1 text-teal-600">% ao ano</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-red-100 text-red-700">
-                      133.3% maior em Oiapoque
-                    </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-teal-100 p-6">
+                    <p className="text-teal-800 text-center">{t('locationDetails.noData.environment')}</p>
                   </div>
                 </div>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-teal-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-teal-800">
-                      Gestão de Resíduos Sólidos
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-teal-500 rounded-full text-white">
-                      <Recycle className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-teal-600 mr-1"></div>
-                        <span className="text-xs font-medium text-teal-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-teal-800">
-                        42.7<span className="text-xs ml-1 text-teal-600">%</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-teal-400 mr-1"></div>
-                        <span className="text-xs font-medium text-teal-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-teal-800">
-                        76.5<span className="text-xs ml-1 text-teal-600">%</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-teal-100 text-teal-700">
-                      44.2% menor em Oiapoque
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="absolute bottom-0 right-0 w-[30%] z-20">
-                <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-teal-100 p-4 h-full transform transition-transform duration-300 hover:scale-105">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-base font-medium text-teal-800">
-                      Impacto de Atividades Extrativistas
-                    </h3>
-                    <div className="w-8 h-8 flex items-center justify-center bg-teal-500 rounded-full text-white">
-                      <Pickaxe className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-teal-600 mb-2">Área afetada por extração mineral</p>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-teal-600 mr-1"></div>
-                        <span className="text-xs font-medium text-teal-700">Oiapoque</span>
-                      </div>
-                      <span className="text-sm font-bold text-teal-800">
-                        5.4<span className="text-xs ml-1 text-teal-600">% do território</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 rounded-full bg-teal-400 mr-1"></div>
-                        <span className="text-xs font-medium text-teal-700">Saint-Georges</span>
-                      </div>
-                      <span className="text-sm font-bold text-teal-800">
-                        2.1<span className="text-xs ml-1 text-teal-600">% do território</span>
-                      </span>
-                    </div>
-                    <div className="text-xs font-medium px-2 py-1 rounded-full text-center bg-red-100 text-red-700">
-                      157.1% maior em Oiapoque
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
-      </div>
-    );
-  }
+        </div>
+      );
+    }
 
     // Renderização para outras categorias (mantém o comportamento original)
-  return (
+    return (
       <>
         {/* Grid de indicadores */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -1303,44 +1048,44 @@ const LocationDetails = () => {
             return (
               <div 
                 key={indicator.id}
-                className="bg-gray-50 p-6 rounded-xl border border-gray-100 hover:shadow-md transition-all"
+                className="bg-gray-50 p-4 sm:p-6 rounded-xl border border-gray-100 hover:shadow-md transition-all"
               >
-                <h3 className="text-lg font-medium text-gray-700 mb-4">
+                <h3 className="text-base sm:text-lg font-medium text-gray-700 mb-3 sm:mb-4">
                   {indicator.title}
                 </h3>
-                <div className="flex items-center gap-3">
-                  <IndicatorIcon className="w-10 h-10 text-green-500" />
-                  <span className="text-2xl md:text-3xl font-bold text-gray-800">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <IndicatorIcon className="w-8 h-8 sm:w-10 sm:h-10 text-green-500" />
+                  <span className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
                     {indicator.value}
-                    <span className="text-sm ml-1 text-gray-500">{indicator.unit}</span>
+                    <span className="text-xs sm:text-sm ml-1 text-gray-500">{indicator.unit}</span>
                   </span>
-          </div>
-        </div>
+                </div>
+              </div>
             );
           })}
-      </div>
+        </div>
 
         {/* Gráfico ou visualização relacionada à categoria */}
-        <div className="mt-12 p-8 bg-green-50 rounded-xl flex flex-col items-center">
-          <h3 className="text-xl font-semibold text-green-800 mb-4">
-            {activeCategory === 'desenvolvimento' ? 'Desenvolvimento Socioeconômico' :
-             activeCategory === 'populacao' ? 'Dados Demográficos' :
-             activeCategory === 'educacao' ? 'Estatísticas Educacionais' :
-             'Indicadores Ambientais'}
+        <div className="mt-8 sm:mt-12 p-4 sm:p-8 bg-green-50 rounded-xl flex flex-col items-center">
+          <h3 className="text-lg sm:text-xl font-semibold text-green-800 mb-3 sm:mb-4 text-center">
+            {activeCategory === 'Comércio' ? t('locationDetails.categoryData.commerce') :
+             activeCategory === 'População' ? t('locationDetails.categoryData.population') :
+             activeCategory === 'Educação' ? t('locationDetails.categoryData.education') :
+             t('locationDetails.categoryData.environment')}
           </h3>
-          <p className="text-green-700 text-center max-w-3xl mb-6">
+          <p className="text-green-700 text-center text-sm sm:text-base max-w-3xl mb-4 sm:mb-6">
             Este é um indicador composto que resume a performance das cidades gêmeas 
             em relação a outros municípios da região fronteiriça.
           </p>
-          <div className="h-12 w-full max-w-lg bg-gray-200 rounded-full overflow-hidden mb-2">
+          <div className="h-8 sm:h-12 w-full max-w-lg bg-gray-200 rounded-full overflow-hidden mb-2">
             <div 
-              className="h-full bg-green-500 flex items-center justify-end pr-3 text-white font-medium"
+              className="h-full bg-green-500 flex items-center justify-end pr-3 text-white text-sm sm:text-base font-medium"
               style={{ width: '65%' }}
             >
               65%
-        </div>
+            </div>
           </div>
-          <span className="text-sm text-gray-500">
+          <span className="text-xs sm:text-sm text-gray-500">
             Fonte: Dados de pesquisa PIT-T (2023)
           </span>
         </div>
@@ -1352,63 +1097,103 @@ const LocationDetails = () => {
   const renderHealthCard = (indicator: HealthIndicator) => {
     if (!indicator) return null;
     
-    const IconComponent = indicator.icon || Heart;
+    // Determinar o componente de ícone
+    const IconComponent = indicator.icon && typeof indicator.icon !== 'string' 
+      ? indicator.icon 
+      : Heart;
     
     // Calcular a diferença percentual entre os valores (quando possível)
     let difference = null;
-    if (!isNaN(Number(indicator.oiapoque.value)) && !isNaN(Number(indicator.saintGeorges.value))) {
-      const value1 = Number(indicator.oiapoque.value);
-      const value2 = Number(indicator.saintGeorges.value);
+    if (!isNaN(Number(indicator.cityA.value)) && !isNaN(Number(indicator.cityB.value))) {
+      const value1 = Number(indicator.cityA.value);
+      const value2 = Number(indicator.cityB.value);
       if (value1 > 0 && value2 > 0) {
         difference = ((value2 - value1) / value1) * 100;
       }
     }
     
+    const cityA = twinCity?.cityA_name || 'Oiapoque';
+    const cityB = twinCity?.cityB_name || 'Saint-Georges';
+    
+    // Extrair anos das datas de estudo
+    const yearStart = extractYear(indicator.study_date_start || '');
+    const yearEnd = extractYear(indicator.study_date_end || '');
+    
+    // Formatar período
+    const periodText = yearStart 
+      ? (yearEnd && yearStart !== yearEnd) 
+        ? `${yearStart} - ${yearEnd}` 
+        : yearStart
+      : '';
+    
     return (
       <div 
-        className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-green-100 p-4 h-full transform transition-transform duration-300 hover:scale-105"
+        className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-green-100 p-3 sm:p-4 h-full transform transition-transform duration-300 hover:scale-105"
       >
         <div className="flex items-start justify-between mb-2">
-          <h3 className="text-base font-medium text-green-800">
-                {indicator.title}
-              </h3>
-          <div className="w-8 h-8 flex items-center justify-center bg-green-500 rounded-full text-white">
-            <IconComponent className="w-4 h-4" />
+          <h3 className="text-sm sm:text-base font-medium text-green-800">
+            {indicator.title}
+          </h3>
+          <div className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-green-500 rounded-full text-white">
+            <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
         
+        {/* Data e fonte com melhor formatação */}
+        {(periodText || indicator.source_title) && (
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 text-xs text-green-600 border-b border-green-100 pb-2">
+            {periodText && (
+              <div className="flex items-center mb-1 sm:mb-0">
+                <span className="mr-1 opacity-70">{t('locationDetails.yearPeriod')}</span>
+                <span>{periodText}</span>
+              </div>
+            )}
+            {indicator.source_title && (
+              <a 
+                href={indicator.source_link || '#'}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center hover:text-green-800 transition-colors"
+              >
+                <FileText className="w-3 h-3 mr-1" />
+                <span className="underline truncate max-w-[150px] sm:max-w-none">{indicator.source_title}</span>
+              </a>
+            )}
+          </div>
+        )}
+        
         {indicator.description && (
-          <p className="text-xs text-green-600 mb-2">{indicator.description}</p>
+          <p className="text-xs text-green-600 mb-2 line-clamp-2 sm:line-clamp-none">{indicator.description}</p>
         )}
         
         <div className="flex flex-col space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-2 h-2 rounded-full bg-green-600 mr-1"></div>
-              <span className="text-xs font-medium text-green-700">Oiapoque</span>
+              <span className="text-xs font-medium text-green-700">{cityA}</span>
             </div>
             <span className="text-sm font-bold text-green-800">
-              {indicator.oiapoque.value}
-              <span className="text-xs ml-1 text-green-600">{indicator.oiapoque.unit}</span>
+              {indicator.cityA.value}
+              <span className="text-xs ml-1 text-green-600">{indicator.cityA.unit}</span>
             </span>
           </div>
           
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-2 h-2 rounded-full bg-emerald-400 mr-1"></div>
-              <span className="text-xs font-medium text-green-700">Saint-Georges</span>
+              <span className="text-xs font-medium text-green-700">{cityB}</span>
             </div>
             <span className="text-sm font-bold text-green-800">
-              {indicator.saintGeorges.value}
-              <span className="text-xs ml-1 text-green-600">{indicator.saintGeorges.unit}</span>
+              {indicator.cityB.value}
+              <span className="text-xs ml-1 text-green-600">{indicator.cityB.unit}</span>
             </span>
           </div>
           
           {difference !== null && (
             <div className={`text-xs font-medium px-2 py-1 rounded-full text-center ${difference > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
               {difference > 0 
-                ? `${Math.abs(difference).toFixed(1)}% menor em Oiapoque` 
-                : `${Math.abs(difference).toFixed(1)}% maior em Oiapoque`}
+                ? `${Math.abs(difference).toFixed(1)}% menor em ${cityA}` 
+                : `${Math.abs(difference).toFixed(1)}% maior em ${cityA}`}
             </div>
           )}
         </div>
@@ -1425,206 +1210,180 @@ const LocationDetails = () => {
 
   // Função para renderizar o conteúdo do acervo digital
   const renderDigitalCollectionContent = () => {
-    // Dados mockados para cada categoria
-    const mockData = {
-      livros: [
-        { id: 1, titulo: "Fronteiras e Relações Internacionais", autor: "Maria Silva", ano: "2022", link: "#" },
-        { id: 2, titulo: "História do Oiapoque", autor: "João Santos", ano: "2021", link: "#" },
-        { id: 3, titulo: "Povos da Fronteira Franco-Brasileira", autor: "Ana Souza", ano: "2023", link: "#" },
-        { id: 4, titulo: "Desenvolvimento Sustentável na Amazônia", autor: "Pedro Lima", ano: "2020", link: "#" },
-        { id: 5, titulo: "Cultura e Sociedade na Fronteira", autor: "Carlos Mendes", ano: "2022", link: "#" }
-      ],
-      relatorios: [
-        { id: 1, titulo: "Relatório Socioeconômico 2023", instituicao: "UNIFAP", data: "2023", link: "#" },
-        { id: 2, titulo: "Análise do Fluxo Migratório", instituicao: "IBGE", data: "2022", link: "#" },
-        { id: 3, titulo: "Indicadores de Saúde na Fronteira", instituicao: "Ministério da Saúde", data: "2023", link: "#" },
-        { id: 4, titulo: "Educação Transfronteiriça", instituicao: "Secretaria de Educação", data: "2022", link: "#" },
-        { id: 5, titulo: "Comércio Internacional Local", instituicao: "Ministério da Economia", data: "2023", link: "#" }
-      ],
-      artigos: [
-        { id: 1, titulo: "Desafios da Saúde na Fronteira", autor: "Dr. Roberto Alves", revista: "Revista Fronteiras", ano: "2023", link: "#" },
-        { id: 2, titulo: "Educação Bilíngue", autor: "Profa. Maria Gomes", revista: "Educação & Sociedade", ano: "2022", link: "#" },
-        { id: 3, titulo: "Economia Local", autor: "Dr. José Silva", revista: "Economia Regional", ano: "2023", link: "#" },
-        { id: 4, titulo: "Meio Ambiente e Desenvolvimento", autor: "Dra. Ana Paula Santos", revista: "Amazônia Hoje", ano: "2022", link: "#" },
-        { id: 5, titulo: "Cultura e Identidade", autor: "Prof. Carlos Eduardo", revista: "Antropologia Social", ano: "2023", link: "#" }
-      ],
-      outros: [
-        { id: 1, titulo: "Documentário: Vida na Fronteira", tipo: "Vídeo", autor: "João Cinematográfica", ano: "2023", link: "#" },
-        { id: 2, titulo: "Mapa Interativo da Região", tipo: "Recurso Digital", autor: "Equipe GeoFront", ano: "2022", link: "#" },
-        { id: 3, titulo: "Podcast: Vozes da Fronteira", tipo: "Áudio", autor: "Rádio Local", ano: "2023", link: "#" },
-        { id: 4, titulo: "Atlas da Região Fronteiriça", tipo: "Material Cartográfico", autor: "Instituto de Geografia", ano: "2022", link: "#" },
-        { id: 5, titulo: "Exposição Virtual: Fronteiras", tipo: "Galeria Digital", autor: "Museu Regional", ano: "2023", link: "#" }
-      ]
+    // Seleciona os dados reais da API conforme a aba ativa
+    let data: any[] = [];
+    let headers: string[] = [];
+    switch(activeTab) {
+      case 'livros':
+        data = digitalCollection.livros;
+        headers = ['Título', 'Autor', 'Ano', 'Categoria', 'Ação'];
+        break;
+      case 'relatorios':
+        data = digitalCollection.relatorios;
+        headers = ['Título', 'Autor', 'Ano', 'Categoria', 'Ação'];
+        break;
+      case 'artigos':
+        data = digitalCollection.artigos;
+        headers = ['Título', 'Autor', 'Ano', 'Categoria', 'Ação'];
+        break;
+      case 'outros':
+        data = digitalCollection.outros;
+        headers = ['Título', 'Autor', 'Ano', 'Categoria', 'Ação'];
+        break;
+      default:
+        data = [];
+        headers = [];
+    }
+
+    // Gerar uma cor baseada na categoria
+    const getCategoryColor = (category: string): string => {
+      switch(category.toLowerCase()) {
+        case 'books':
+          return 'bg-blue-500';
+        case 'reports':
+          return 'bg-teal-500';
+        case 'articles':
+          return 'bg-amber-500';
+        default:
+          return 'bg-purple-500';
+      }
     };
 
-    const renderTable = () => {
-      let data;
-      let headers;
-
-      switch(activeTab) {
-        case 'livros':
-          data = mockData.livros;
-          headers = ['Título', 'Autor', 'Ano', 'Ação'];
-          return (
-            <table className="min-w-full bg-white rounded-lg overflow-hidden">
-              <thead className="bg-green-50">
-                <tr>
-                  {headers.map((header, index) => (
-                    <th key={index} className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-green-100">
-                {data.map((item) => (
-                  <tr key={item.id} className="hover:bg-green-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.titulo}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.autor}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.ano}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <a href={item.link} className="text-green-600 hover:text-green-900">Acessar</a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          );
-
-        case 'relatorios':
-          data = mockData.relatorios;
-          headers = ['Título', 'Instituição', 'Data', 'Ação'];
-          return (
-            <table className="min-w-full bg-white rounded-lg overflow-hidden">
-              <thead className="bg-green-50">
-                <tr>
-                  {headers.map((header, index) => (
-                    <th key={index} className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-green-100">
-                {data.map((item) => (
-                  <tr key={item.id} className="hover:bg-green-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.titulo}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.instituicao}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.data}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <a href={item.link} className="text-green-600 hover:text-green-900">Acessar</a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          );
-
-        case 'artigos':
-          data = mockData.artigos;
-          headers = ['Título', 'Autor', 'Revista', 'Ano', 'Ação'];
-          return (
-            <table className="min-w-full bg-white rounded-lg overflow-hidden">
-              <thead className="bg-green-50">
-                <tr>
-                  {headers.map((header, index) => (
-                    <th key={index} className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-green-100">
-                {data.map((item) => (
-                  <tr key={item.id} className="hover:bg-green-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.titulo}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.autor}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.revista}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.ano}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <a href={item.link} className="text-green-600 hover:text-green-900">Acessar</a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          );
-
-        case 'outros':
-          data = mockData.outros;
-          headers = ['Título', 'Tipo', 'Autor', 'Ano', 'Ação'];
-          return (
-            <table className="min-w-full bg-white rounded-lg overflow-hidden">
-              <thead className="bg-green-50">
-                <tr>
-                  {headers.map((header, index) => (
-                    <th key={index} className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-green-100">
-                {data.map((item) => (
-                  <tr key={item.id} className="hover:bg-green-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.titulo}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.tipo}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.autor}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.ano}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <a href={item.link} className="text-green-600 hover:text-green-900">Acessar</a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          );
-
-        default:
-          return null;
+    // Versão mobile: lista de cards
+    const renderMobileList = () => {
+      if (data.length === 0) {
+        return (
+          <div className="bg-white rounded-lg p-4 text-center text-gray-500 shadow-sm border border-gray-100">
+            Nenhum documento encontrado.
+          </div>
+        );
       }
+
+      return (
+        <div className="space-y-3">
+          {data.map((item) => {
+            const categoryColor = getCategoryColor(item.category);
+            const actionLabel = item.kind === 'external' && item.external_url 
+              ? 'Acessar' 
+              : item.file_url 
+                ? 'Download' 
+                : 'Indisponível';
+            
+            const actionColor = actionLabel === 'Indisponível' 
+              ? 'text-gray-400' 
+              : 'text-green-600 hover:text-green-900';
+
+            return (
+              <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-100 flex overflow-hidden">
+                {/* Barra lateral colorida */}
+                <div className={`${categoryColor} w-2`}></div>
+                
+                {/* Conteúdo principal */}
+                <div className="flex-grow p-3">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-medium text-gray-800 text-sm">{item.title}</h3>
+                    
+                    {/* Badge com ação */}
+                    <a 
+                      href={item.external_url || item.file_url || '#'} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className={`${actionLabel === 'Indisponível' ? 'pointer-events-none' : ''} ${
+                        actionLabel === 'Acessar' 
+                          ? 'bg-blue-100 text-blue-800'
+                          : actionLabel === 'Download'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-600'
+                      } text-xs px-2 py-1 rounded-full`}
+                    >
+                      {actionLabel}
+                    </a>
+                  </div>
+                  
+                  <div className="mt-1 text-xs text-gray-500 flex items-center">
+                    <span className="inline-flex items-center">
+                      <FileText className="w-3 h-3 mr-1" /> {item.publication_year || 'N/D'}
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>{item.author || 'Autor desconhecido'}</span>
+                  </div>
+                  
+                  <div className="mt-1 text-xs text-gray-400">
+                    {translateCategory(item.category)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    // Versão desktop: tabela
+    const renderDesktopTable = () => {
+      return (
+        <table className="min-w-full bg-white rounded-lg overflow-hidden">
+          <thead className="bg-green-50">
+            <tr>
+              {headers.map((header, index) => (
+                <th 
+                  key={index} 
+                  className="px-6 py-3 text-left text-xs font-medium text-green-800 uppercase tracking-wider"
+                >
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-green-100">
+            {data.length === 0 ? (
+              <tr><td colSpan={headers.length} className="px-6 py-4 text-center text-gray-500">Nenhum documento encontrado.</td></tr>
+            ) : data.map((item) => (
+              <tr key={item.id} className="hover:bg-green-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.title}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.author}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.publication_year}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{translateCategory(item.category)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  {item.kind === 'external' && item.external_url ? (
+                    <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-900">Acessar</a>
+                  ) : item.file_url ? (
+                    <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-900">Download</a>
+                  ) : (
+                    <span className="text-gray-400">Indisponível</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
     };
 
     return (
       <div className="overflow-x-auto">
-        {renderTable()}
+        {/* Mostrar cards em mobile e tabela em desktop */}
+        <div className="block sm:hidden">
+          {renderMobileList()}
+        </div>
+        <div className="hidden sm:block">
+          {renderDesktopTable()}
+        </div>
       </div>
     );
   };
 
   const renderGalleries = () => {
-    // Dados mockados para as galerias
-    const mockGalleries: Gallery[] = [
-      {
-        id: 1,
-        title: "Galeria Oiapoque",
-        description: "Imagens da cidade de Oiapoque, mostrando seus pontos turísticos, cultura e cotidiano.",
-        images: [
-          { url: "https://upload.wikimedia.org/wikipedia/commons/c/cd/Ponte_Oiapoque_geral.jpg", alt: "Ponte Binacional" },
-          { url: "https://www.gov.br/mre/pt-br/assuntos/noticias/ponte-brasil-franca-no-amapa-comeca-a-receber-veiculos-estrangeiros/arco_capa_pica.jpg/@@images/image/full", alt: "Marco Fronteiriço" },
-          { url: "https://i0.wp.com/www.portalholofote.com.br/wp-content/uploads/2023/09/WhatsApp-Image-2023-09-13-at-17.29.59-1.jpeg", alt: "Cidade de Oiapoque" },
-          { url: "https://diariodoamapa.com.br/wp-content/uploads/2023/03/Oiapoque-Marco-Zero-1-1280x720.jpg", alt: "Marco Zero" }
-        ]
-      },
-      {
-        id: 2,
-        title: "Galeria Saint-Georges",
-        description: "A comuna de Saint-Georges-de-l'Oyapock na Guiana Francesa, sua arquitetura, paisagens e cultura local.",
-        images: [
-          { url: "https://www.ctguyane.fr/app/uploads/Saint-Georges-scaled.jpg", alt: "Vista de Saint-Georges" },
-          { url: "https://www.blada.com/data/File/2018/jgaillot30104.jpg", alt: "Rua de Saint-Georges" },
-          { url: "https://3.bp.blogspot.com/-YkBbfZK6vw8/V_uiIBqGg9I/AAAAAAAAUUI/JYzrkpX7GwYYkhiR05S9i5q7ozrDZf8IgCLcB/s1600/Saint-georges-guiana-francesa.jpg", alt: "Rio Oiapoque" },
-          { url: "https://www.blada.com/data/File/2020/jmarlin19021.jpg", alt: "Praça Central" }
-        ]
-      }
-    ];
-
+    // Nomes das cidades para uso nas galerias
+    const cityA = twinCity?.cityA_name || 'Oiapoque';
+    const cityB = twinCity?.cityB_name || 'Saint-Georges';
+    
     return (
       <div className="mb-10">
         <h2 className="text-2xl font-bold mb-6 text-center">Galerias de Imagens</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
           <div 
-            className="relative rounded-xl overflow-hidden shadow-lg h-96"
+            className="relative rounded-xl overflow-hidden shadow-lg h-48 sm:h-64 md:h-96"
             style={{ 
               backgroundImage: `url(${Oiapoque})`,
               backgroundSize: 'cover',
@@ -1632,17 +1391,17 @@ const LocationDetails = () => {
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20"></div>
-            <div className="absolute inset-0 p-6 flex flex-col justify-end">
-              <h3 className="text-2xl font-bold text-white mb-2">Galeria Oiapoque</h3>
-              <p className="text-white/90 mb-4">Imagens da cidade de Oiapoque, mostrando seus pontos turísticos, cultura e cotidiano.</p>
-              <button className="w-full mt-2 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors">
-                Ver galeria completa
+            <div className="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end">
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2">{cityA}</h3>
+              <p className="text-xs sm:text-sm md:text-base text-white/90 mb-2 sm:mb-4">Imagens da cidade de {cityA}, mostrando seus pontos turísticos, cultura e cotidiano.</p>
+              <button className="w-full mt-1 sm:mt-2 py-1.5 sm:py-2 sm:py-3 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors">
+                Ver galeria
               </button>
             </div>
           </div>
 
           <div 
-            className="relative rounded-xl overflow-hidden shadow-lg h-96"
+            className="relative rounded-xl overflow-hidden shadow-lg h-48 sm:h-64 md:h-96"
             style={{ 
               backgroundImage: `url(${SaintGeorges})`,
               backgroundSize: 'cover',
@@ -1650,11 +1409,11 @@ const LocationDetails = () => {
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20"></div>
-            <div className="absolute inset-0 p-6 flex flex-col justify-end">
-              <h3 className="text-2xl font-bold text-white mb-2">Galeria Saint-Georges</h3>
-              <p className="text-white/90 mb-4">A comuna de Saint-Georges-de-l'Oyapock na Guiana Francesa, sua arquitetura, paisagens e cultura local.</p>
-              <button className="w-full mt-2 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors">
-                Ver galeria completa
+            <div className="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end">
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2">{cityB}</h3>
+              <p className="text-xs sm:text-sm md:text-base text-white/90 mb-2 sm:mb-4">A comuna de {cityB}, sua arquitetura, paisagens e cultura local.</p>
+              <button className="w-full mt-1 sm:mt-2 py-1.5 sm:py-2 sm:py-3 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors">
+                Ver galeria
               </button>
             </div>
           </div>
@@ -1663,10 +1422,390 @@ const LocationDetails = () => {
     );
   };
 
+  // Adicionar novos métodos de renderização para cards compactos
+  const renderCompactHealthCard = (indicator: HealthIndicator) => {
+    if (!indicator) return null;
+    
+    // Determinar o componente de ícone
+    const IconComponent = indicator.icon && typeof indicator.icon !== 'string' 
+      ? indicator.icon 
+      : Heart;
+    
+    // Nomes das cidades
+    const cityA = twinCity?.cityA_name || 'Oiapoque';
+    const cityB = twinCity?.cityB_name || 'Saint-Georges';
+    
+    // ID único para o card
+    const cardId = `health-${indicator.id}`;
+    
+    // Verificar se o card está expandido
+    const isExpanded = expandedCards[cardId] || false;
+    
+    // Função para alternar estado de expansão
+    const toggleExpand = () => {
+      setExpandedCards(prev => ({
+        ...prev,
+        [cardId]: !prev[cardId]
+      }));
+    };
+    
+    // Extrair anos das datas de estudo
+    const yearStart = extractYear(indicator.study_date_start || '');
+    const yearEnd = extractYear(indicator.study_date_end || '');
+    
+    // Formatar período
+    const periodText = yearStart 
+      ? (yearEnd && yearStart !== yearEnd) 
+        ? `${yearStart} - ${yearEnd}` 
+        : yearStart
+      : '';
+    
+    return (
+      <div 
+        className={`
+          bg-white rounded-xl shadow-md border border-green-100 
+          overflow-hidden transition-all duration-300 ease-in-out
+          ${isExpanded ? 'shadow-lg' : 'shadow-sm'}
+          mb-3
+        `}
+      >
+        {/* Cabeçalho clicável do card - sempre visível */}
+        <div 
+          className="flex items-start px-3 py-3 cursor-pointer"
+          onClick={toggleExpand}
+        >
+          <div className="flex-shrink-0 mr-3">
+            <div className="w-9 h-9 flex items-center justify-center bg-green-100 rounded-full">
+              <IconComponent className="w-5 h-5 text-green-600" />
+            </div>
+          </div>
+          
+          <div className="flex-grow mr-2">
+            <h3 className="text-sm leading-snug font-medium text-green-800">
+              {indicator.title}
+            </h3>
+          </div>
+          
+          <div 
+            className={`
+              w-7 h-7 rounded-full bg-green-50 flex items-center justify-center 
+              transition-transform duration-300 flex-shrink-0 
+              ${isExpanded ? 'rotate-180' : ''}
+            `}
+          >
+            <svg 
+              className="w-4 h-4 text-green-600" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        
+        {/* Conteúdo expandido */}
+        <div 
+          className={`
+            overflow-hidden transition-all duration-300 ease-in-out bg-green-50/50
+            ${isExpanded ? 'max-h-[300px] opacity-100 pt-0 px-3 pb-3 border-t border-green-100' : 'max-h-0 opacity-0 p-0 border-t-0'}
+          `}
+        >
+          {/* Período e fonte */}
+          {(periodText || indicator.source_title) && (
+            <div className="flex flex-wrap items-center justify-between py-2 text-xs text-green-600 border-b border-green-100/70">
+              {periodText && (
+                <div className="flex items-center">
+                  <span className="mr-1 opacity-70">{t('locationDetails.yearPeriod')}</span>
+                  <span className="font-medium">{periodText}</span>
+                </div>
+              )}
+              {indicator.source_title && (
+                <a 
+                  href={indicator.source_link || '#'}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center hover:text-green-800 transition-colors"
+                >
+                  <FileText className="w-3 h-3 mr-1" />
+                  <span className="underline truncate max-w-[180px]">{indicator.source_title}</span>
+                </a>
+              )}
+            </div>
+          )}
+        
+          {/* Descrição */}
+          {indicator.description && (
+            <p className="text-xs text-green-600 py-2 border-b border-green-100/70">{indicator.description}</p>
+          )}
+          
+          {/* Valores das cidades */}
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div className="bg-white rounded-lg p-2 border border-green-100">
+              <div className="flex items-center mb-1">
+                <div className="w-2 h-2 rounded-full bg-green-600 mr-1"></div>
+                <span className="text-xs font-medium text-green-700">{cityA}</span>
+              </div>
+              <div className="text-base font-bold text-green-800">
+                {indicator.cityA.value}
+                <span className="text-xs ml-1 text-green-600">{indicator.cityA.unit}</span>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg p-2 border border-green-100">
+              <div className="flex items-center mb-1">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 mr-1"></div>
+                <span className="text-xs font-medium text-green-700">{cityB}</span>
+              </div>
+              <div className="text-base font-bold text-green-800">
+                {indicator.cityB.value}
+                <span className="text-xs ml-1 text-green-600">{indicator.cityB.unit}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCompactGenericCard = (indicator: ComparativeIndicator, color: 'blue' | 'amber' | 'emerald' | 'teal') => {
+    if (!indicator) return null;
+    
+    // Determinar o componente de ícone
+    const IconComponent = indicator.icon && typeof indicator.icon !== 'string' 
+      ? indicator.icon 
+      : Heart;
+    
+    // Nomes das cidades
+    const cityA = twinCity?.cityA_name || 'Cidade A';
+    const cityB = twinCity?.cityB_name || 'Cidade B';
+    
+    // ID único para o card
+    const cardId = `${color}-${indicator.id}`;
+    
+    // Verificar se o card está expandido
+    const isExpanded = expandedCards[cardId] || false;
+    
+    // Função para alternar estado de expansão
+    const toggleExpand = () => {
+      setExpandedCards(prev => ({
+        ...prev,
+        [cardId]: !prev[cardId]
+      }));
+    };
+    
+    // Classes baseadas na cor
+    const textColor = `text-${color}-800`;
+    const bgColor = `bg-${color}-500`;
+    const iconBgColor = `bg-${color}-100`;
+    const iconColor = `text-${color}-600`;
+    const borderColor = `border-${color}-100`;
+    const descriptionColor = `text-${color}-600`;
+    const expandedBgColor = `bg-${color}-50/50`;
+    
+    // Extrair anos das datas de estudo
+    const yearStart = extractYear(indicator.study_date_start || '');
+    const yearEnd = extractYear(indicator.study_date_end || '');
+    
+    // Formatar período
+    const periodText = yearStart 
+      ? (yearEnd && yearStart !== yearEnd) 
+        ? `${yearStart} - ${yearEnd}` 
+        : yearStart
+      : '';
+    
+    return (
+      <div 
+        className={`
+          bg-white rounded-xl shadow-md ${borderColor}
+          overflow-hidden transition-all duration-300 ease-in-out
+          ${isExpanded ? 'shadow-lg' : 'shadow-sm'}
+          mb-3
+        `}
+      >
+        {/* Cabeçalho clicável do card - sempre visível */}
+        <div 
+          className="flex items-start px-3 py-3 cursor-pointer"
+          onClick={toggleExpand}
+        >
+          <div className="flex-shrink-0 mr-3">
+            <div className={`w-9 h-9 flex items-center justify-center ${iconBgColor} rounded-full`}>
+              <IconComponent className={`w-5 h-5 ${iconColor}`} />
+            </div>
+          </div>
+          
+          <div className="flex-grow mr-2">
+            <h3 className={`text-sm leading-snug font-medium ${textColor}`}>
+              {indicator.title}
+            </h3>
+          </div>
+          
+          <div 
+            className={`
+              w-7 h-7 rounded-full ${iconBgColor} flex items-center justify-center 
+              transition-transform duration-300 flex-shrink-0
+              ${isExpanded ? 'rotate-180' : ''}
+            `}
+          >
+            <svg 
+              className={`w-4 h-4 ${iconColor}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        
+        {/* Conteúdo expandido */}
+        <div 
+          className={`
+            overflow-hidden transition-all duration-300 ease-in-out ${expandedBgColor}
+            ${isExpanded ? 'max-h-[300px] opacity-100 pt-0 px-3 pb-3 border-t' : 'max-h-0 opacity-0 p-0 border-t-0'} ${borderColor}
+          `}
+        >
+          {/* Período e fonte */}
+          {(periodText || indicator.source_title) && (
+            <div className={`flex flex-wrap items-center justify-between py-2 text-xs ${descriptionColor} border-b ${borderColor}/70`}>
+              {periodText && (
+                <div className="flex items-center">
+                  <span className="mr-1 opacity-70">{t('locationDetails.yearPeriod')}</span>
+                  <span className="font-medium">{periodText}</span>
+                </div>
+              )}
+              {indicator.source_title && (
+                <a 
+                  href={indicator.source_link || '#'}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={`flex items-center hover:${textColor} transition-colors`}
+                >
+                  <FileText className="w-3 h-3 mr-1" />
+                  <span className="underline truncate max-w-[180px]">{indicator.source_title}</span>
+                </a>
+              )}
+            </div>
+          )}
+        
+          {/* Descrição */}
+          {indicator.description && (
+            <p className={`text-xs ${descriptionColor} py-2 border-b ${borderColor}/70`}>{indicator.description}</p>
+          )}
+          
+          {/* Valores das cidades */}
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div className={`bg-white rounded-lg p-2 border ${borderColor}`}>
+              <div className="flex items-center mb-1">
+                <div className={`w-2 h-2 rounded-full bg-${color}-600 mr-1`}></div>
+                <span className={`text-xs font-medium ${descriptionColor}`}>{cityA}</span>
+              </div>
+              <div className={`text-base font-bold ${textColor}`}>
+                {indicator.cityA.value}
+                <span className={`text-xs ml-1 ${descriptionColor}`}>{indicator.cityA.unit}</span>
+              </div>
+            </div>
+            
+            <div className={`bg-white rounded-lg p-2 border ${borderColor}`}>
+              <div className="flex items-center mb-1">
+                <div className={`w-2 h-2 rounded-full bg-${color}-400 mr-1`}></div>
+                <span className={`text-xs font-medium ${descriptionColor}`}>{cityB}</span>
+              </div>
+              <div className={`text-base font-bold ${textColor}`}>
+                {indicator.cityB.value}
+                <span className={`text-xs ml-1 ${descriptionColor}`}>{indicator.cityB.unit}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Adicionar estilos CSS para ocultar a scrollbar mas manter a funcionalidade
+  const animationStylesUpdated = `
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    @keyframes float-slow {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+    @keyframes float-medium {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    .animate-float {
+      animation: float 4s ease-in-out infinite;
+    }
+    .animate-float-slow {
+      animation: float-slow 6s ease-in-out infinite;
+    }
+    .animate-float-medium {
+      animation: float-medium 5s ease-in-out infinite;
+    }
+    .animate-shimmer-slow {
+      animation: shimmer 5s ease-in-out infinite;
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2s ease-in-out infinite;
+    }
+    .active\\:scale-95:active {
+      transform: scale(0.95);
+    }
+    .active\\:scale-98:active {
+      transform: scale(0.98);
+    }
+    .hover\\:scale-102:hover {
+      transform: scale(1.02);
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;  /* Chrome, Safari, Opera */
+    }
+  `;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="text-xl text-gray-600">Carregando...</div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full mb-4"></div>
+          <div className="text-xl text-gray-600">Carregando...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 max-w-md text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-red-700 mb-2">Erro ao carregar dados</h2>
+          <p className="text-red-600 mb-6">{error}</p>
+          <div className="flex justify-center">
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            >
+              Voltar para o início
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1674,116 +1813,340 @@ const LocationDetails = () => {
   if (!location) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <p className="text-xl text-gray-600">{t('locationDetails.notFound')}</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-8 max-w-md text-center">
+          <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-amber-700 mb-2">Localização não encontrada</h2>
+          <p className="text-amber-600 mb-6">
+            Não foram encontrados dados para a localização solicitada.
+          </p>
+          <div className="flex justify-center">
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+            >
+              Voltar para o início
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header com design moderno 3D */}
-      <div className="relative h-64 md:h-80 overflow-hidden mb-6">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${Ponte})` }}
-        />
-        
-        {/* Overlay gradiente moderno */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-transparent"></div>
-        
-        {/* Elementos de design modernos */}
-        <div className="absolute inset-0 z-0 opacity-40">
-          <div className="absolute top-10 left-10 w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm animate-float"></div>
-          <div className="absolute top-20 right-20 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm animate-float-slow"></div>
-          <div className="absolute bottom-10 left-1/4 w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm animate-float-medium"></div>
+      {/* Header com design moderno representando cidades gêmeas */}
+      <div className="relative h-auto min-h-[28rem] md:h-96 overflow-hidden mb-6 bg-gradient-to-r from-green-900 via-green-1200 to-blue-600 py-8 md:py-0">
+        {/* Elementos de design abstratos para simbolizar cidades e conexão */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Elementos gráficos do lado esquerdo (primeira cidade) */}
+          <div className="absolute top-20 left-10 md:left-20 w-16 h-16 md:w-40 md:h-40 rounded-xl bg-white/10 backdrop-blur-md transform rotate-12 animate-float"></div>
+          <div className="absolute top-10 left-16 md:left-32 w-8 h-8 md:w-24 md:h-24 rounded-lg bg-white/15 backdrop-blur-md transform -rotate-6 animate-float-slow"></div>
+          <div className="absolute bottom-10 left-12 md:left-40 w-12 h-12 md:w-28 md:h-28 rounded-lg bg-white/10 backdrop-blur-md transform rotate-45 animate-float-medium"></div>
+          
+          {/* Linha central conectando as cidades */}
+          <div className="absolute left-1/2 top-1/2 w-4/5 h-1 bg-white/10 backdrop-blur-md transform -translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute left-1/2 top-1/2 w-10 h-10 rounded-full bg-white/600 backdrop-blur-md transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+          
+          {/* Elementos gráficos do lado direito (segunda cidade) */}
+          <div className="absolute top-16 right-10 md:right-20 w-16 h-16 md:w-40 md:h-40 rounded-xl bg-white/10 backdrop-blur-md transform -rotate-12 animate-float-slow"></div>
+          <div className="absolute top-6 right-16 md:right-32 w-8 h-8 md:w-24 md:h-24 rounded-lg bg-white/15 backdrop-blur-md transform rotate-6 animate-float"></div>
+          <div className="absolute bottom-10 right-12 md:right-40 w-12 h-12 md:w-28 md:h-28 rounded-lg bg-white/10 backdrop-blur-md transform -rotate-45 animate-float-medium"></div>
         </div>
         
-        {/* Conteúdo */}
-        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight drop-shadow-lg">
+        {/* Conteúdo do header */}
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4 pt-4 pb-8 sm:py-0">
+          <span className="inline-block px-4 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs sm:text-sm font-medium mb-3 sm:mb-3">
+            Cidades Transfronteiriças
+          </span>
+          <h1 className="text-xl sm:text-3xl md:text-5xl font-bold text-white mb-3 sm:mb-2 tracking-tight drop-shadow-lg">
             Cidades Gêmeas
-            </h1>
-          <h2 className="text-2xl md:text-3xl font-bold text-white/90 mb-4 drop-shadow-lg">
-            {location.name} e {location.twin_city || 'Saint-Georges'}
-          </h2>
-          <p className="text-white/80 text-lg md:text-xl max-w-3xl drop-shadow-lg">
-            Dados sobre saúde, população, desenvolvimento socioeconômico, educação e meio ambiente
+          </h1>
+          <div className="flex items-center justify-center mb-3 sm:mb-4">
+            <h2 className="text-base sm:text-xl md:text-3xl font-bold text-white/90 drop-shadow-lg">
+              {twinCity?.cityA_name || 'Cidade A'}
+            </h2>
+            <div className="mx-2 sm:mx-4 w-5 h-5 sm:w-8 sm:h-8 flex items-center justify-center rounded-full bg-white/30 backdrop-blur-md">
+              <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+            </div>
+            <h2 className="text-base sm:text-xl md:text-3xl font-bold text-white/90 drop-shadow-lg">
+              {twinCity?.cityB_name || 'Cidade B'}
+            </h2>
+          </div>
+          <p className="text-white/80 text-sm sm:text-base md:text-lg max-w-3xl drop-shadow-lg">
+            {twinCity?.description || 'Dados sobre saúde, população, desenvolvimento socioeconômico, educação e meio ambiente'}
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4">
-        {/* Menu de navegação com efeito de flutuação */}
-        <div className="flex justify-center mb-8">
-          <div className="backdrop-blur-lg bg-white/60 rounded-2xl p-3 shadow-lg border border-green-100 inline-flex gap-2">
-            {categories.map((category) => {
-              const CategoryIcon = category.icon;
-              const isActive = activeCategory === category.id;
-              
-              let bgColor = '';
-              let textColor = '';
-              let hoverBg = '';
-              
-              switch(category.id) {
-                case 'saude':
-                  bgColor = isActive ? 'bg-green-500' : '';
-                  textColor = isActive ? 'text-white' : 'text-green-700';
-                  hoverBg = !isActive ? 'hover:bg-green-100' : '';
-                  break;
-                case 'populacao':
-                  bgColor = isActive ? 'bg-blue-500' : '';
-                  textColor = isActive ? 'text-white' : 'text-blue-700';
-                  hoverBg = !isActive ? 'hover:bg-blue-100' : '';
-                  break;
-                case 'desenvolvimento':
-                  bgColor = isActive ? 'bg-amber-500' : '';
-                  textColor = isActive ? 'text-white' : 'text-amber-700';
-                  hoverBg = !isActive ? 'hover:bg-amber-100' : '';
-                  break;
-                case 'educacao':
-                  bgColor = isActive ? 'bg-emerald-500' : '';
-                  textColor = isActive ? 'text-white' : 'text-emerald-700';
-                  hoverBg = !isActive ? 'hover:bg-emerald-100' : '';
-                  break;
-                case 'meio_ambiente':
-                  bgColor = isActive ? 'bg-teal-500' : '';
-                  textColor = isActive ? 'text-white' : 'text-teal-700';
-                  hoverBg = !isActive ? 'hover:bg-teal-100' : '';
-                  break;
-              }
-              
-              return (
-              <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                className={`
-                    flex items-center gap-2 px-4 py-2 rounded-xl transition-all
-                    ${bgColor} ${textColor} ${hoverBg}
-                    ${isActive ? 'shadow-md' : ''}
-                  `}
+        {/* Menu de navegação responsivo com efeito glassmorphism */}
+        <div className="mb-8 sticky top-0 z-30 pt-2 pb-3 bg-gradient-to-r from-white/80 to-white/90 backdrop-blur-xl shadow-lg -mx-4 px-4 border-b border-white/20">
+          {/* Versão mobile: sistema de acordeão */}
+          <div className="md:hidden max-w-sm mx-auto">
+            {/* Botão ativo que mostra a categoria selecionada */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={`
+                flex items-center justify-between w-full px-5 py-3.5 
+                bg-gradient-to-r from-white/80 to-white/90 backdrop-blur-2xl 
+                rounded-2xl shadow-md border border-white/50
+                transition-all duration-300 ease-in-out
+                ${mobileMenuOpen ? 'rounded-b-none shadow-lg' : ''}
+              `}
+            >
+              <div className="flex items-center gap-3">
+                {(() => {
+                  // Função para determinar o ícone e a cor da categoria ativa
+                  let IconComponent;
+                  let iconColor;
+                  
+                  switch(activeCategory) {
+                    case 'Saúde':
+                      IconComponent = Heart;
+                      iconColor = 'text-green-600';
+                      break;
+                    case 'População':
+                      IconComponent = Users;
+                      iconColor = 'text-blue-600';
+                      break;
+                    case 'Comércio':
+                      IconComponent = TrendingUp;
+                      iconColor = 'text-amber-600';
+                      break;
+                    case 'Educação':
+                      IconComponent = GraduationCap;
+                      iconColor = 'text-emerald-600';
+                      break;
+                    case 'Meio Ambiente':
+                      IconComponent = Leaf;
+                      iconColor = 'text-teal-600';
+                      break;
+                    default:
+                      IconComponent = Heart;
+                      iconColor = 'text-green-600';
+                  }
+                  
+                  return (
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${iconColor.replace('text-', 'bg-').replace('600', '100')}`}>
+                      <IconComponent className={`w-5 h-5 ${iconColor}`} />
+                    </div>
+                  );
+                })()}
+                <span className="font-semibold text-gray-800">{activeCategory}</span>
+              </div>
+              <div className={`w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center transition-transform duration-300 ${mobileMenuOpen ? 'rotate-180' : ''}`}>
+                <svg 
+                  className="w-4 h-4 text-gray-500" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
                 >
-                  <CategoryIcon className="w-5 h-5" />
-                  <span className="font-medium">
-                    {category.label}
-                  </span>
-              </button>
-              );
-            })}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+            
+            {/* Acordeão expandido */}
+            <div 
+              className={`
+                overflow-hidden transition-all duration-300 ease-in-out
+                bg-gradient-to-b from-white/90 to-white/80 backdrop-blur-xl
+                rounded-b-2xl shadow-lg border-x border-b border-white/50
+                ${mobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}
+              `}
+            >
+              {categories.map((category, index) => {
+                const CategoryIcon = category.icon;
+                const isActive = activeCategory === category.id;
+                
+                // Determine as cores com base na categoria
+                let bgColor = '';
+                let iconBgColor = '';
+                let iconColor = '';
+                let textColor = '';
+                
+                switch(category.id) {
+                  case 'Saúde': 
+                    iconBgColor = 'bg-green-100';
+                    iconColor = 'text-green-600';
+                    textColor = 'text-green-800';
+                    bgColor = isActive ? 'bg-green-50' : '';
+                    break;
+                  case 'População': 
+                    iconBgColor = 'bg-blue-100';
+                    iconColor = 'text-blue-600';
+                    textColor = 'text-blue-800';
+                    bgColor = isActive ? 'bg-blue-50' : '';
+                    break;
+                  case 'Comércio': 
+                    iconBgColor = 'bg-amber-100';
+                    iconColor = 'text-amber-600';
+                    textColor = 'text-amber-800';
+                    bgColor = isActive ? 'bg-amber-50' : '';
+                    break;
+                  case 'Educação': 
+                    iconBgColor = 'bg-emerald-100';
+                    iconColor = 'text-emerald-600';
+                    textColor = 'text-emerald-800';
+                    bgColor = isActive ? 'bg-emerald-50' : '';
+                    break;
+                  case 'Meio Ambiente': 
+                    iconBgColor = 'bg-teal-100';
+                    iconColor = 'text-teal-600';
+                    textColor = 'text-teal-800';
+                    bgColor = isActive ? 'bg-teal-50' : '';
+                    break;
+                }
+                
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => {
+                      setActiveCategory(category.id);
+                      setTimeout(() => setMobileMenuOpen(false), 300);
+                    }}
+                    className={`
+                      flex items-center gap-3 px-5 py-3.5 w-full
+                      ${bgColor}
+                      ${index !== categories.length - 1 ? 'border-b border-gray-100' : ''}
+                      active:scale-98 transition-all duration-150
+                    `}
+                  >
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${iconBgColor}`}>
+                      <CategoryIcon className={`w-5 h-5 ${iconColor}`} />
+                    </div>
+                    <span className={`font-medium ${textColor}`}>
+                      {category.label}
+                    </span>
+                    {isActive && (
+                      <div className="ml-auto">
+                        <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-400 to-blue-500"></div>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+          </div>
+          
+          {/* Versão desktop: menu horizontal com efeito glassmorphism */}
+          <div className="hidden md:flex justify-center">
+            <div className="bg-gradient-to-r from-white/70 via-white/50 to-white/70 backdrop-blur-xl rounded-2xl p-3 shadow-xl border border-white/30 inline-flex gap-1 sm:gap-1.5 relative overflow-hidden">
+              {/* Efeito de reflexo */}
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute -inset-[400px] opacity-20 bg-gradient-to-r from-transparent via-white to-transparent -rotate-45 animate-shimmer-slow"></div>
+              </div>
+
+              {/* Linha de "piso" com reflexo */}
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"></div>
+              
+              {categories.map((category, index) => {
+                const CategoryIcon = category.icon;
+                const isActive = activeCategory === category.id;
+                
+                // Determinar cores e estilos para cada categoria
+                let bgGradient = '';
+                let textColor = '';
+                let hoverEffect = '';
+                let transitionEffect = '';
+                let shadowEffect = '';
+                
+                switch(category.id) {
+                  case 'Saúde':
+                    bgGradient = isActive ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-white/50';
+                    textColor = isActive ? 'text-white' : 'text-green-700';
+                    hoverEffect = !isActive ? 'hover:bg-green-50 hover:bg-opacity-80' : '';
+                    transitionEffect = 'transform-gpu transition-all duration-300 ease-out';
+                    shadowEffect = isActive ? 'shadow-lg shadow-green-200/50' : '';
+                    break;
+                  case 'População':
+                    bgGradient = isActive ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-white/50';
+                    textColor = isActive ? 'text-white' : 'text-blue-700';
+                    hoverEffect = !isActive ? 'hover:bg-blue-50 hover:bg-opacity-80' : '';
+                    transitionEffect = 'transform-gpu transition-all duration-300 ease-out';
+                    shadowEffect = isActive ? 'shadow-lg shadow-blue-200/50' : '';
+                    break;
+                  case 'Comércio':
+                    bgGradient = isActive ? 'bg-gradient-to-r from-amber-500 to-amber-600' : 'bg-white/50';
+                    textColor = isActive ? 'text-white' : 'text-amber-700';
+                    hoverEffect = !isActive ? 'hover:bg-amber-50 hover:bg-opacity-80' : '';
+                    transitionEffect = 'transform-gpu transition-all duration-300 ease-out';
+                    shadowEffect = isActive ? 'shadow-lg shadow-amber-200/50' : '';
+                    break;
+                  case 'Educação':
+                    bgGradient = isActive ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-white/50';
+                    textColor = isActive ? 'text-white' : 'text-emerald-700';
+                    hoverEffect = !isActive ? 'hover:bg-emerald-50 hover:bg-opacity-80' : '';
+                    transitionEffect = 'transform-gpu transition-all duration-300 ease-out';
+                    shadowEffect = isActive ? 'shadow-lg shadow-emerald-200/50' : '';
+                    break;
+                  case 'Meio Ambiente':
+                    bgGradient = isActive ? 'bg-gradient-to-r from-teal-500 to-teal-600' : 'bg-white/50';
+                    textColor = isActive ? 'text-white' : 'text-teal-700';
+                    hoverEffect = !isActive ? 'hover:bg-teal-50 hover:bg-opacity-80' : '';
+                    transitionEffect = 'transform-gpu transition-all duration-300 ease-out';
+                    shadowEffect = isActive ? 'shadow-lg shadow-teal-200/50' : '';
+                    break;
+                }
+                
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    className={`
+                      relative z-10
+                      flex items-center gap-2 px-4 py-2.5 
+                      backdrop-blur-sm rounded-xl border border-white/30
+                      ${bgGradient} ${textColor} ${hoverEffect} ${shadowEffect}
+                      ${transitionEffect}
+                      ${isActive ? 'scale-105' : 'hover:scale-102'}
+                      active:scale-95
+                    `}
+                  >
+                    {/* Reflexo no topo do botão */}
+                    {isActive && (
+                      <div className="absolute inset-x-0 top-0 h-px bg-white/50"></div>
+                    )}
+                    
+                    <CategoryIcon className={`w-5 h-5 ${isActive ? 'animate-pulse-subtle' : ''}`} />
+                    <span className="font-medium select-none">
+                      {category.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Conteúdo principal - terceira linha com o layout redesenhado */}
-        <div className="mb-12">
+        <div className="mb-8 sm:mb-12">
           {renderCategoryContent()}
         </div>
         
         {/* Quarta linha - Acervo Digital */}
-        <div className="mt-12">
-          <h2 className="text-4xl font-bold text-green-800 text-center mb-8">
+        <div className="mt-8 sm:mt-12">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-800 text-center mb-4 sm:mb-8">
             Acervo Digital
           </h2>
-          <div className="flex justify-center mb-4">
+          
+          {/* Tabs - Versão mobile: Dropdown selector */}
+          <div className="sm:hidden mb-4">
+            <select 
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value)}
+              className="w-full p-3 bg-white text-green-700 border border-green-200 rounded-lg shadow-sm"
+            >
+              {tabs.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Tabs - Versão desktop: Botões horizontais */}
+          <div className="hidden sm:flex justify-center mb-4">
             {tabs.map((tab) => {
               const TabIcon = tab.icon;
               return (
@@ -1798,25 +2161,28 @@ const LocationDetails = () => {
               );
             })}
           </div>
-          <div className="bg-white rounded-lg shadow-md p-6">
-            {renderDigitalCollectionContent()}
+          
+          <div className="bg-white rounded-lg shadow-md p-2 sm:p-6 overflow-hidden">
+            <div className="overflow-x-auto -mx-2 px-2">
+              {renderDigitalCollectionContent()}
+            </div>
           </div>
         </div>
 
         {/* Quinta linha - Galerias */}
-        <div className="mt-12">
-          <h2 className="text-4xl font-bold text-green-800 text-center mb-8">
+        <div className="mt-8 sm:mt-12">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-800 text-center mb-4 sm:mb-8">
             Galerias
           </h2>
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-3 sm:p-6">
             {renderGalleries()}
-        </div>
+          </div>
         </div>
 
       </div>
       
       {/* Aplicar estilos de animação usando style convencional do React */}
-      <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
+      <style dangerouslySetInnerHTML={{ __html: animationStylesUpdated }} />
     </div>
   );
 };

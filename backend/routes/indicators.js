@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const IndicatorController = require('../src/controllers/IndicatorController');
 
+// Listar todas as categorias disponíveis
+router.get('/categories', IndicatorController.listCategories);
+
+// Listar todos os ícones disponíveis
+router.get('/icons', IndicatorController.listIcons);
+
 // Listar todos os indicadores
 router.get('/', IndicatorController.index);
 
