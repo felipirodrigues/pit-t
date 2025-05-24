@@ -44,10 +44,6 @@ export const router = createBrowserRouter([
         element: <LocationDetails />
       },
       {
-        path: 'user',
-        element: <Users />
-      },
-      {
         path: 'galerias',
         element: <Galleries />
       },
@@ -92,6 +88,10 @@ export const router = createBrowserRouter([
       {
         path: 'gallery/:id/items',
         element: <GalleryItems />
+      },
+      {
+        path: 'users',
+        element: <Users />
       },
       {
         path: 'collaboration',

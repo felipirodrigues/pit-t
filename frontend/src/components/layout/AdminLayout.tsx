@@ -30,7 +30,7 @@ const AdminLayout = () => {
     { path: '/admin/indicators', icon: TrendingUp, label: t('admin.menu.indicators') },
     { path: '/admin/gallery', icon: Image, label: t('admin.menu.gallery') },
     { path: '/admin/collection', icon: BookOpen, label: t('admin.menu.collection') },
-    { path: '/admin/user', icon: Users, label: t('admin.menu.users') },
+    { path: '/admin/users', icon: Users, label: t('admin.menu.users') },
     { path: '/admin/collaboration', icon: MessageSquare, label: t('admin.menu.collaboration') },
     //{ path: '/admin/reports', icon: FileBarChart, label: t('admin.menu.reports') }
   ];

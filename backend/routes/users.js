@@ -56,7 +56,7 @@ router.post('/login', async (req, res) => {
 // Listar todos os usuários - requer autenticação
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const [users] = await db.query('SELECT id, name, email, created_at, updated_at FROM users');
+    const [users] = await db.query('SELECT id, name, email, role, created_at, updated_at FROM users');
     return res.json(users);
   } catch (error) {
     console.error('Erro ao listar usuários:', error);
@@ -70,7 +70,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     const { id } = req.params;
     
     const [users] = await db.query(
-      'SELECT id, name, email, created_at, updated_at FROM users WHERE id = ?', 
+      'SELECT id, name, email, role, created_at, updated_at FROM users WHERE id = ?', 
       [id]
     );
     
@@ -88,7 +88,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // Criar um novo usuário - requer autenticação
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role = 'admin' } = req.body;
     
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Nome, email e senha são obrigatórios' });
@@ -104,15 +104,15 @@ router.post('/', authMiddleware, async (req, res) => {
     // Hash da senha
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Inserir usuário
+    // Inserir usuário com role admin por padrão
     const [result] = await db.query(
-      'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-      [name, email, hashedPassword]
+      'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+      [name, email, hashedPassword, role]
     );
     
     // Retornar o novo usuário sem a senha
     const [newUser] = await db.query(
-      'SELECT id, name, email, created_at, updated_at FROM users WHERE id = ?',
+      'SELECT id, name, email, role, created_at, updated_at FROM users WHERE id = ?',
       [result.insertId]
     );
     
@@ -127,7 +127,7 @@ router.post('/', authMiddleware, async (req, res) => {
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
     
     // Verificar se o usuário existe
     const [users] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
@@ -168,6 +168,11 @@ router.put('/:id', authMiddleware, async (req, res) => {
       values.push(hashedPassword);
     }
     
+    if (role) {
+      updateFields.push('role = ?');
+      values.push(role);
+    }
+    
     if (updateFields.length === 0) {
       return res.status(400).json({ message: 'Nenhum campo para atualizar' });
     }
@@ -183,7 +188,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     
     // Retornar o usuário atualizado sem a senha
     const [updatedUser] = await db.query(
-      'SELECT id, name, email, created_at, updated_at FROM users WHERE id = ?',
+      'SELECT id, name, email, role, created_at, updated_at FROM users WHERE id = ?',
       [id]
     );
     
@@ -229,7 +234,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 router.get('/auth/me', authMiddleware, async (req, res) => {
   try {
     const [users] = await db.query(
-      'SELECT id, name, email, created_at, updated_at FROM users WHERE id = ?', 
+      'SELECT id, name, email, role, created_at, updated_at FROM users WHERE id = ?', 
       [req.userId]
     );
     

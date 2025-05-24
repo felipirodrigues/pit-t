@@ -1,13 +1,26 @@
 {
-  "dependencies": {
-    "multer": "^1.4.5-lts.2",
-    "react-globe.gl": "^2.33.2",
-    "three": "^0.175.0"
+  "name": "PIT-T",
+  "version": "1.0.0",
+  "description": "PIT-T: Plataforma interativa de tipologias transfronteiriças",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend", 
+    "build:frontend": "npm run build --prefix frontend",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "start": "npm start --prefix backend",
+    "test": "npm test --prefix backend && npm test --prefix frontend"
   },
   "devDependencies": {
-    "@types/d3-scale": "^4.0.9",
-    "@types/d3-scale-chromatic": "^3.1.0",
-    "@types/three": "^0.175.0",
-    "mapshaper": "^0.6.102"
-  }
+    "concurrently": "^7.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "seu-repositorio-aqui"
+  },
+  "author": "Seu Nome",
+  "license": "MIT"
 }
