@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Play, Info } from 'lucide-react';
 import Sidebar from '../components/layout/Sidebar';
-import Oiaporque from '../images/Oiapoque.jpg'
-import SaintGeorges from '../images/Saintgeorge.jpg'
-import Lethem from '../images/Lethem.jpg'
-import Bonfim from '../images/Bonfim.jpeg'
-import Albina from '../images/Albina.jpg'
+import Oiaporque from '../images/oiapoque.jpg'
+import SaintGeorges from '../images/saintgeorge.jpg'
+import Lethem from '../images/lethem.jpg'
+import Bonfim from '../images/bonfim.jpeg'
+import Albina from '../images/albina.jpg'
 
 // Interfaces
 interface GalleryImage {
