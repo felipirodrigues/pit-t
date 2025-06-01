@@ -5,6 +5,7 @@ import { Home, BookCopy, Users, Camera, Map, X, Menu, LogIn, Globe, ChevronDown,
 import LanguageSwitcher from './LanguageSwitcher';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import LogoPotedes from '../../images/logo-potedes.png';
 
 // Interface para as cidades gêmeas
 interface TwinCity {
@@ -143,8 +144,8 @@ const Sidebar = () => {
           
           <div className="relative p-3 md:p-4 border-b border-emerald-700/50">
             <div className="flex items-center justify-between md:block">
-              <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 shadow-md mx-auto">
-                <Map className="w-5 h-5 md:w-6 md:h-6 text-white" />
+              <div className="flex items-center justify-center w-12 h-12 md:w-16 md:h-16 mx-auto">
+                <img src={LogoPotedes} alt="Logo POTEDES" className="w-full h-full object-contain" />
               </div>
               <button
                 onClick={closeSidebar}
