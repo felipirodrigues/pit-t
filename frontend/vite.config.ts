@@ -13,6 +13,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['lucide-react'],
     exclude: [],
+    force: true
   },
   resolve: {
     alias: {
@@ -32,8 +33,11 @@ export default defineConfig({
       }
     },
     commonjsOptions: {
-      exclude: [/node_modules\/(?!cesium)/],
-      include: [/node_modules\/cesium/]
+      transformMixedEsModules: true,
+      include: [/node_modules/]
     }
   },
+  define: {
+    global: 'globalThis',
+  }
 });
