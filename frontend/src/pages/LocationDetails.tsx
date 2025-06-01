@@ -14,10 +14,10 @@ import SaintGeorges from '../images/saintgeorge2.jpg'
 import Lethem from '../images/lethem2.jpg'
 import Bonfim from '../images/bonfim2.jpeg'
 import SaintLaurent from '../images/Saintlaurent2.jpg'
-import SantaElena from '../images/santaelena2.jpg'
+import SantaElena from '../images/Santaelena2.jpg'
 import Pacaraima from '../images/pacaraima2.jpg'
-import Nickerie from '../images/nickerie2.jpg'
-import Corriverton from '../images/corriverton2.jpg'
+import Nickerie from '../images/Nickerie2.jpg'
+import Corriverton from '../images/Corriverton2.jpg'
 interface Location {
   id: number;
   name: string;
