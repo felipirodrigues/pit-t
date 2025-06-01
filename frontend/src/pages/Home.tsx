@@ -6,7 +6,7 @@ import { MapPin, Search, ZoomIn, ZoomOut, Globe as GlobeIcon, RotateCcw, Loader2
 import Sidebar from '../components/layout/Sidebar';
 import api, { API_BASE_URL } from '../services/api';
 import logoPitt from '../images/logo-potedes.png'; // Importe a logo do sistema
-import map from '../images/mapa.png';
+import map from '../images/mapa.jpg';
 
 // Estilos para os marcadores do mapa
 const markerStyles = `
