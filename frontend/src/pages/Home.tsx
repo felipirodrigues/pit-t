@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Globe from 'react-globe.gl';
 import { MapPin, Search, ZoomIn, ZoomOut, RotateCcw, Loader2, Menu } from 'lucide-react';
+import * as THREE from 'three';
 import Sidebar from '../components/layout/Sidebar';
+import clouds from '../images/clouds.png';
 import api, { API_BASE_URL } from '../services/api';
 import logoPitt from '../images/logo-potedes.png'; // Importe a logo do sistema
 import map from '../images/mapa.jpg';
@@ -32,6 +34,15 @@ interface TwinCity {
   description?: string;
 }
 
+interface CloudData {
+  lat: number;
+  lng: number;
+  size: number;
+  alt: number;
+  cloudColor: string;
+  rotateSpeed: number;
+}
+
 // Cores diferentes para cada par de cidades gêmeas
 const TWIN_CITY_COLORS = [
   '#feca57', // Amarelo (cor única para todos os marcadores)
@@ -53,6 +64,31 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const globeRef = useRef<any>();
+  
+  // Gerar dados de nuvens
+  const [cloudsData, setCloudsData] = useState<CloudData[]>([]);
+  
+  useEffect(() => {
+    // Gerar camadas de nuvens
+    const cloudsArray: CloudData[] = [];
+    const numClouds = 2;
+    
+    for (let i = 0; i < numClouds; i++) {
+      const phi = Math.random() * Math.PI * 2;
+      const theta = Math.random() * Math.PI - Math.PI / 2;
+      
+      cloudsArray.push({
+        lat: (theta * 180) / Math.PI,
+        lng: (phi * 180) / Math.PI,
+        size: Math.random() / 3 + 0.1,
+        alt: Math.random() * 0.3 + 0.1,
+        cloudColor: '#ffffff', // Cor sólida para evitar problemas de RGBA
+        rotateSpeed: Math.random() / 150
+      });
+    }
+    
+    setCloudsData(cloudsArray);
+  }, []);
 
   // Atualizar dimensões quando a janela for redimensionada
   const handleResize = useCallback(() => {
@@ -161,6 +197,43 @@ const Home = () => {
     }
   };
 
+  // Adicionar camada de nuvens usando Three.js
+  useEffect(() => {
+    if (globeRef.current && isGlobeReady) {
+      const globe = globeRef.current;
+      
+      // URL correta da textura das nuvens
+      const CLOUDS_IMG_URL = clouds; // Usar a imagem importada
+      const CLOUDS_ALT = 0.004;
+      const CLOUDS_ROTATION_SPEED = -0.006; // deg/frame
+      
+      // Carregar a textura das nuvens
+      new (THREE as any).TextureLoader().load(CLOUDS_IMG_URL, (cloudsTexture: any) => {
+        // Criar uma esfera para as nuvens
+        const cloudsLayer = new (THREE as any).Mesh(
+          new (THREE as any).SphereGeometry(globe.getGlobeRadius() * (1 + CLOUDS_ALT), 75, 75),
+          new (THREE as any).MeshPhongMaterial({
+            map: cloudsTexture,
+            transparent: true,
+            opacity: 0.8
+          })
+        );
+        
+        // Adicionar à cena
+        globe.scene().add(cloudsLayer);
+        
+        // Rotação inicial para posicionar corretamente
+        cloudsLayer.rotation.x = Math.PI / 8;
+        
+        // Animação para rotacionar as nuvens
+        (function rotateClouds() {
+          cloudsLayer.rotation.y += CLOUDS_ROTATION_SPEED * Math.PI / 180;
+          requestAnimationFrame(rotateClouds);
+        })();
+      });
+    }
+  }, [isGlobeReady]);
+
   return (
     <div className="fixed inset-0 overflow-hidden">
       <Sidebar />
@@ -189,10 +262,10 @@ const Home = () => {
           width={dimensions.width}
           height={dimensions.height}
           
-          // Configuração otimizada - removendo texturas pesadas
+          // Configuração completa com texturas restauradas
           globeImageUrl={map}
-          // bumpImageUrl removido para melhor performance
-          // backgroundImageUrl removido para melhor performance
+          bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+          backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
           
           // Configurações básicas
           enablePointerInteraction={true}
@@ -247,6 +320,47 @@ const Home = () => {
             return el;
           }}
           onGlobeReady={() => setGlobeReady(true)}
+        />
+      </div>
+
+      {/* Nuvens como camada secundária */}
+      <div className="absolute inset-0 pointer-events-none">
+        <Globe
+          width={dimensions.width}
+          height={dimensions.height}
+          backgroundColor="transparent"
+          showGlobe={false}
+          showAtmosphere={false}
+          
+          // Nuvens
+          customLayerData={cloudsData}
+          customThreeObject={(d: any) => {
+            const cloud = d as CloudData;
+            // Criar a nuvem usando texturas
+            const cloudMaterial = new (THREE as any).SpriteMaterial({
+              map: new (THREE as any).TextureLoader().load(clouds),
+              transparent: true,
+              opacity: 0.7,
+              color: new (THREE as any).Color(cloud.cloudColor)
+            });
+            
+            const sprite = new (THREE as any).Sprite(cloudMaterial);
+            sprite.scale.set(cloud.size, cloud.size, 1);
+            return sprite;
+          }}
+          customThreeObjectUpdate={(obj: any, d: any) => {
+            const cloud = d as CloudData;
+            const globeInstance = globeRef.current;
+            
+            if (globeInstance) {
+              // Atualizar posição das nuvens
+              Object.assign(obj.position, globeInstance.getCoords(cloud.lat, cloud.lng, cloud.alt));
+              
+              // Girar lentamente as nuvens
+              cloud.lng += cloud.rotateSpeed;
+              if (cloud.lng > 180) cloud.lng -= 360;
+            }
+          }}
         />
       </div>
 
