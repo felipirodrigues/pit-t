@@ -2,10 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Play, Info } from 'lucide-react';
 import Sidebar from '../components/layout/Sidebar';
 import Oiaporque from '../images/oiapoque.jpg'
-import SaintGeorges from '../images/saintgeorge.jpg'
-import Lethem from '../images/lethem.jpg'
-import Bonfim from '../images/bonfim.jpeg'
+import SaintGeorges from '../images/saintgeorge2.jpg'
+import Lethem from '../images/lethem2.jpg'
+import Bonfim from '../images/bonfim2.jpeg'
 import Albina from '../images/albina.jpg'
+import SaintLaurent from '../images/Saintlaurent2.jpg'
+import SantaElena from '../images/Santaelena2.jpg'
+import Pacaraima from '../images/pacaraima2.jpg'
+import Nickerie from '../images/nickerie2.jpg'
+import Corriverton from '../images/corriverton2.jpg'
+
 
 // Interfaces
 interface GalleryImage {
@@ -23,6 +29,7 @@ interface GalleryItem {
   tagline: string;
   images: GalleryImage[];
   featured?: boolean;
+  galleryUrl: string;
 }
 
 const Galleries: React.FC = () => {
@@ -34,6 +41,11 @@ const Galleries: React.FC = () => {
   const setAsFeatured = (galleryId: number) => {
     const selected = galleries.find(gallery => gallery.id === galleryId) || null;
     setFeaturedGallery(selected);
+  };
+
+  // Função para abrir galeria em nova aba
+  const openGallery = (url: string) => {
+    window.open(url, '_blank');
   };
 
   // Carregar dados mockados das galerias
@@ -55,7 +67,8 @@ const Galleries: React.FC = () => {
             { url: "https://i0.wp.com/www.portalholofote.com.br/wp-content/uploads/2023/09/WhatsApp-Image-2023-09-13-at-17.29.59-1.jpeg", alt: "Vista da Cidade" },
             { url: "https://diariodoamapa.com.br/wp-content/uploads/2023/03/Oiapoque-Marco-Zero-1-1280x720.jpg", alt: "Marco Zero" }
           ],
-          featured: true
+          featured: true,
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-oiapoque/"
         },
         {
           id: 2,
@@ -70,7 +83,8 @@ const Galleries: React.FC = () => {
             { url: "https://www.blada.com/data/File/2018/jgaillot30104.jpg", alt: "Rua de Saint-Georges" },
             { url: "https://3.bp.blogspot.com/-YkBbfZK6vw8/V_uiIBqGg9I/AAAAAAAAUUI/JYzrkpX7GwYYkhiR05S9i5q7ozrDZf8IgCLcB/s1600/Saint-georges-guiana-francesa.jpg", alt: "Rio Oiapoque" },
             { url: "https://www.blada.com/data/File/2020/jmarlin19021.jpg", alt: "Praça Central" }
-          ]
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-saint-georges/"
         },
         {
           id: 3,
@@ -85,7 +99,8 @@ const Galleries: React.FC = () => {
             { url: "https://cdn.jornaldebrasilia.com.br/wp-content/uploads/2023/01/11152642/lethem.jpg", alt: "Comércio Local" },
             { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Lethem%2C_Guyana_%287177473178%29.jpg/1200px-Lethem%2C_Guyana_%287177473178%29.jpg", alt: "Estrada de Lethem" },
             { url: "https://www.ceiri.news/wp-content/uploads/2022/09/https___cdn.cnn_.com_cnnnext_dam_assets_220908143943-01-takutu-river-bridge.jpeg", alt: "Ponte sobre o Rio Takutu" }
-          ]
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-lethem/"
         },
         {
           id: 4,
@@ -100,7 +115,8 @@ const Galleries: React.FC = () => {
             { url: "https://horahotv.com.br/portal/wp-content/uploads/2021/12/bonfim-900x598.jpg", alt: "Cidade de Bonfim" },
             { url: "https://www.viajarturturtour.com.br/sites/viajarturturtour.com.br/files/2022-09/Imagem%20site%20FLIX%20%282%29.png", alt: "Rio Tacutu" },
             { url: "https://www.atribunarn.com.br/wp-content/uploads/2023/02/ponte-guiana-e1676555070536.jpeg", alt: "Ponte Brasil-Guiana" }
-          ]
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-bonfim/"
         },
         {
           id: 5,
@@ -115,7 +131,88 @@ const Galleries: React.FC = () => {
             { url: "https://upload.wikimedia.org/wikipedia/commons/6/60/Albina_Suriname.JPG", alt: "Vista de Albina" },
             { url: "https://www.waterkant.net/wp-content/uploads/2021/12/ALBINA-SURINAME.jpg", alt: "Ruas de Albina" },
             { url: "https://upload.wikimedia.org/wikipedia/commons/f/f5/Suriname_Albina_%28255599076%29.jpeg", alt: "Rio Marowijne" }
-          ]
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-albina/"
+        },
+        {
+          id: 6,
+          title: "Saint-Laurent-du-Maroni",
+          city: "Saint-Laurent-du-Maroni",
+          country: "Guiana Francesa",
+          tagline: "Portal histórico da Guiana Francesa",
+          description: "Saint-Laurent-du-Maroni é uma comuna francesa situada na margem leste do rio Maroni. Antiga cidade penitenciária, hoje é conhecida por seu patrimônio histórico e cultural único na região amazônica.",
+          coverImage: SaintLaurent,
+          images: [
+            { url: "https://upload.wikimedia.org/wikipedia/commons/8/8f/Saint-Laurent-du-Maroni_-_Ancien_bagne.jpg", alt: "Antigo presídio" },
+            { url: "https://www.guyane-amazonie.fr/sites/default/files/styles/image_page_actualite/public/2021-04/saint-laurent-du-maroni-rue.jpg", alt: "Ruas históricas" },
+            { url: "https://www.ctguyane.fr/app/uploads/Saint-Laurent-du-Maroni-2-scaled.jpg", alt: "Vista da cidade" },
+            { url: "https://upload.wikimedia.org/wikipedia/commons/e/e0/Maroni_river_Saint-Laurent_du_Maroni_French_Guiana.jpg", alt: "Rio Maroni" }
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-st-laurent-du-maroni/"
+        },
+        {
+          id: 7,
+          title: "Santa Elena de Uairén",
+          city: "Santa Elena de Uairén",
+          country: "Venezuela",
+          tagline: "Porta de entrada venezuelana ao Monte Roraima",
+          description: "Santa Elena de Uairén é uma cidade venezuelana localizada na fronteira com o Brasil. É conhecida como porta de entrada para o Monte Roraima e por sua rica diversidade cultural indígena.",
+          coverImage: SantaElena,
+          images: [
+            { url: "https://upload.wikimedia.org/wikipedia/commons/6/6c/Santa_Elena_de_Uair%C3%A9n_Venezuela.jpg", alt: "Vista de Santa Elena" },
+            { url: "https://venezuelanalysis.com/images/8664", alt: "Centro da cidade" },
+            { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Mount_Roraima_in_Venezuela.jpg/800px-Mount_Roraima_in_Venezuela.jpg", alt: "Monte Roraima" },
+            { url: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0b/4a/5a/0e/santa-elena-de-uairen.jpg", alt: "Paisagem local" }
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-santa-elena-de-uairen/"
+        },
+        {
+          id: 8,
+          title: "Pacaraíma",
+          city: "Pacaraíma",
+          country: "Brasil",
+          tagline: "Fronteira brasileira com a Venezuela",
+          description: "Pacaraíma é um município brasileiro do estado de Roraima, situado na fronteira com a Venezuela. É conhecida pela proximidade com o Monte Roraima e pela intensa circulação fronteiriça.",
+          coverImage: Pacaraima,
+          images: [
+            { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Pacaraima_RR.jpg/800px-Pacaraima_RR.jpg", alt: "Vista de Pacaraíma" },
+            { url: "https://www.folhabv.com.br/Geral/2020/12/1606159/marco-bv-8-na-fronteira.jpg", alt: "Marco fronteiriço" },
+            { url: "https://g1.globo.com/rr/roraima/noticia/2020/03/18/fronteira-entre-brasil-e-venezuela-em-pacaraima-e-fechada-para-conter-avanco-do-coronavirus.ghtml", alt: "Fronteira Brasil-Venezuela" },
+            { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Mount_Roraima_in_Venezuela.jpg/600px-Mount_Roraima_in_Venezuela.jpg", alt: "Vista do Monte Roraima" }
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-pacaraima/"
+        },
+        {
+          id: 9,
+          title: "Nickerie",
+          city: "Nickerie",
+          country: "Suriname",
+          tagline: "Centro agrícola do oeste surinamês",
+          description: "Nickerie é um distrito do Suriname conhecido por sua produção agrícola, especialmente arroz. É uma importante região econômica e porta de entrada para a Guiana.",
+          coverImage: Nickerie,
+          images: [
+            { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Nieuw-Nickerie_centrum.jpg/800px-Nieuw-Nickerie_centrum.jpg", alt: "Centro de Nickerie" },
+            { url: "https://suriname.travel/wp-content/uploads/2019/04/Nickerie-district-Suriname.jpg", alt: "Distrito de Nickerie" },
+            { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Rice_field_Suriname.jpg/800px-Rice_field_Suriname.jpg", alt: "Campos de arroz" },
+            { url: "https://www.caribbean-sailing.com/wp-content/uploads/2016/09/suriname-nickerie-river.jpg", alt: "Rio Nickerie" }
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-nickerie/"
+        },
+        {
+          id: 10,
+          title: "Corriverton",
+          city: "Corriverton",
+          country: "Guiana",
+          tagline: "Porto comercial na costa leste da Guiana",
+          description: "Corriverton é uma cidade costeira da Guiana, importante centro comercial e pesqueiro. Localizada na foz do rio Berbice, é conhecida por sua indústria de pesca e comércio regional.",
+          coverImage: Corriverton,
+          images: [
+            { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Corriverton_Guyana.jpg/800px-Corriverton_Guyana.jpg", alt: "Vista de Corriverton" },
+            { url: "https://guyana.travel/wp-content/uploads/2018/07/corriverton-port.jpg", alt: "Porto de Corriverton" },
+            { url: "https://www.kaieteurnewsonline.com/images/2019/05/Corriverton-market.jpg", alt: "Mercado local" },
+            { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Berbice_River_Bridge.jpg/800px-Berbice_River_Bridge.jpg", alt: "Rio Berbice" }
+          ],
+          galleryUrl: "https://www2.unifap.br/potedes/1-expedicao/localidade-corriverton/"
         }
       ];
 
@@ -190,7 +287,10 @@ const Galleries: React.FC = () => {
           </p>
           
           <div className="flex space-x-4">
-            <button className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
+            <button 
+              onClick={() => openGallery(featuredGallery.galleryUrl)}
+              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+            >
               <Play size={20} /> Ver Galeria
             </button>
             

@@ -15,11 +15,11 @@ const markerStyles = `
 .marker-element {
   position: relative;
   transform: translate(-50%, -50%);
-  transition: all 0.3s ease;
+  transition: all 0.1s ease;
 }
 
 .marker-element:hover {
-  transform: translate(-50%, -50%) scale(1.3);
+  transform: translate(-50%, -50%) scale(0.3);
 }
 `;
 

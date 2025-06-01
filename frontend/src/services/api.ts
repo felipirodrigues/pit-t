@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuração da API usando localhost para desenvolvimento
-export const API_BASE_URL = 'http://200.139.21.49:3000';
+export const API_BASE_URL = 'http://localhost:3000';
 
 // Criar instância do axios com configuração básica
 const api = axios.create({
