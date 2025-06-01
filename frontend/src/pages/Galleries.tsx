@@ -9,8 +9,8 @@ import Albina from '../images/albina.jpg'
 import SaintLaurent from '../images/Saintlaurent2.jpg'
 import SantaElena from '../images/Santaelena2.jpg'
 import Pacaraima from '../images/pacaraima2.jpg'
-import Nickerie from '../images/nickerie2.jpg'
-import Corriverton from '../images/corriverton2.jpg'
+import Nickerie from '../images/Nickerie2.jpg'
+import Corriverton from '../images/Corriverton2.jpg'
 
 
 // Interfaces
