@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Globe from 'react-globe.gl';
-import { MapPin, Search, ZoomIn, ZoomOut, Globe as GlobeIcon, RotateCcw, Loader2, Menu } from 'lucide-react';
+import { MapPin, Search, ZoomIn, ZoomOut, RotateCcw, Loader2, Menu } from 'lucide-react';
 import Sidebar from '../components/layout/Sidebar';
 import api, { API_BASE_URL } from '../services/api';
 import logoPitt from '../images/logo-potedes.png'; // Importe a logo do sistema

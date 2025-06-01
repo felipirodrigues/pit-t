@@ -11,7 +11,8 @@ export default defineConfig({
     strictPort: true,
   },
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    include: ['lucide-react'],
+    exclude: [],
   },
   resolve: {
     alias: {
@@ -23,6 +24,13 @@ export default defineConfig({
     assetsInlineLimit: 0,
     chunkSizeWarningLimit: 1500,
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'lucide-react': ['lucide-react'],
+        }
+      }
+    },
     commonjsOptions: {
       exclude: [/node_modules\/(?!cesium)/],
       include: [/node_modules\/cesium/]
