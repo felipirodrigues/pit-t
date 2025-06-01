@@ -348,8 +348,8 @@ const Home = () => {
                       className="w-5 h-5 md:w-6 md:h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-colors duration-200"
                       style={{
                         backgroundColor: city.id === hoveredId
-                          ? 'rgba(84, 160, 255, 0.5)'  // Azul quando hover (versão com transparência)
-                          : 'rgba(254, 202, 87, 0.5)'  // Amarelo com transparência
+                          ? '#54a0ff'  // Azul quando hover
+                          : '#feca57'  // Amarelo
                       }}
                     >
                       <MapPin className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
