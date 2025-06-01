@@ -629,13 +629,13 @@ const LocationDetails = () => {
             </h2>
             
             {/* Container para a imagem 3D central e cards ao redor */}
-            <div className="relative justify-center">
+            <div className="relative sm:h-[600px]">
               {/* Imagem 3D central - escondida em mobile, visível em desktop */}
               <div className="absolute inset-0 z-10 hidden sm:flex justify-center items-center pointer-events-none">
                 <img 
                   src={Saude} 
                   alt="Representação 3D do setor de saúde" 
-                  className="h-[300px] md:h-[550px] object-contain"
+                  className="h-[300px] md:h-[500px] object-contain"
                 />
               </div>
               
@@ -661,28 +661,51 @@ const LocationDetails = () => {
                   )}
                 </div>
               ) : (
-                <div className="sm:hidden w-full">
-                  <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-green-100 p-6">
-                    <p className="text-green-800 text-center">{t('locationDetails.noData.health')}</p>
+                <>
+                  {/* Mobile: mensagem sem posicionamento absoluto */}
+                  <div className="sm:hidden w-full px-1">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-green-100 p-6">
+                      <p className="text-green-800 text-center">{t('locationDetails.noData.health')}</p>
+                    </div>
                   </div>
-                </div>
+                  
+                  {/* Desktop: mensagem com posicionamento absoluto */}
+                  <div className="hidden sm:flex absolute inset-0 items-center justify-center z-20">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-green-100 p-6">
+                      <p className="text-green-800 text-center">{t('locationDetails.noData.health')}</p>
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* Desktop: grid ao redor da imagem (mantido como estava) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 sm:grid-rows-3 gap-3 sm:gap-5 z-20 w-full max-w-6xl mx-auto">
-                {/* Versão desktop: grid ao redor da imagem */}
-                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[0])}</div>
-                <div className="hidden sm:block col-span-1"></div> {/* Espaço para imagem */}
-                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[1])}</div>
-
-                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[2])}</div>
-                <div className="hidden sm:block col-span-1"></div> {/* Espaço para imagem */}
-                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[3])}</div>
-
-                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[4])}</div>
-                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[5])}</div>
-                <div className="hidden sm:block col-span-1">{renderHealthCard(healthIndicators[6])}</div>
-              </div>
+              {/* Desktop: grid ao redor da imagem - apenas quando há dados */}
+              {healthIndicators.length > 0 && (
+                <div className="hidden sm:block">
+                  {healthIndicators.slice(0, 1).map((indicator, index) => (
+                    <div key={indicator.id} className="absolute top-0 left-0 w-[30%] z-20">
+                      {renderHealthCard(indicator)}
+                    </div>
+                  ))}
+                  
+                  {healthIndicators.slice(1, 2).map((indicator, index) => (
+                    <div key={indicator.id} className="absolute top-0 right-0 w-[30%] z-20">
+                      {renderHealthCard(indicator)}
+                    </div>
+                  ))}
+                  
+                  {healthIndicators.slice(2, 3).map((indicator, index) => (
+                    <div key={indicator.id} className="absolute bottom-0 left-0 w-[30%] z-20">
+                      {renderHealthCard(indicator)}
+                    </div>
+                  ))}
+                  
+                  {healthIndicators.slice(3, 4).map((indicator, index) => (
+                    <div key={indicator.id} className="absolute bottom-0 right-0 w-[30%] z-20">
+                      {renderHealthCard(indicator)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Versão desktop: indicadores adicionais quando há mais de 7 */}
