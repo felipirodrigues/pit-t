@@ -10,8 +10,14 @@ import Ambiente from '../images/ambiente2.png'
 import api from '../services/api';
 import axios from 'axios';
 import Oiapoque from '../images/oiapoque.jpg'
-import SaintGeorges from '../images/saintgeorge.jpg'
-
+import SaintGeorges from '../images/saintgeorge2.jpg'
+import Lethem from '../images/lethem2.jpg'
+import Bonfim from '../images/bonfim2.jpeg'
+import SaintLaurent from '../images/saintlaurent2.jpg'
+import SantaElena from '../images/santaelena2.jpg'
+import Pacaraima from '../images/pacaraima2.jpg'
+import Nickerie from '../images/nickerie2.jpg'
+import Corriverton from '../images/corriverton2.jpg'
 interface Location {
   id: number;
   name: string;
@@ -1378,6 +1384,59 @@ const LocationDetails = () => {
     const cityA = twinCity?.cityA_name || 'Oiapoque';
     const cityB = twinCity?.cityB_name || 'Saint-Georges';
     
+    // Mapeamento de cidades para URLs do POTEDES
+    const cityUrlMap: { [key: string]: string } = {
+      'Oiapoque': 'https://www2.unifap.br/potedes/1-expedicao/localidade-oiapoque/',
+      'Saint-Georges': 'https://www2.unifap.br/potedes/1-expedicao/localidade-saint-georges/',
+      'Bonfim': 'https://www2.unifap.br/potedes/1-expedicao/localidade-bonfim/',
+      'Lethem': 'https://www2.unifap.br/potedes/1-expedicao/localidade-lethem/',
+      'Saint-Laurent-du-Maroni': 'https://www2.unifap.br/potedes/1-expedicao/localidade-st-laurent-du-maroni/',
+      'Santa Elena de Uairén': 'https://www2.unifap.br/potedes/1-expedicao/localidade-santa-elena-de-uairen/',
+      'Pacaraíma': 'https://www2.unifap.br/potedes/1-expedicao/localidade-pacaraima/',
+      'Nickerie': 'https://www2.unifap.br/potedes/1-expedicao/localidade-nickerie/',
+      'Corriverton': 'https://www2.unifap.br/potedes/1-expedicao/localidade-corriverton/'
+    };
+    
+    // Mapeamento de cidades para imagens
+    const cityImageMap: { [key: string]: string } = {
+      'Oiapoque': Oiapoque,
+      'Saint-Georges': SaintGeorges,
+      'Bonfim': Bonfim,
+      'Lethem': Lethem,
+      'Saint-Laurent-du-Maroni': SaintLaurent,
+      'Santa Elena de Uairén': SantaElena,
+      'Pacaraíma': Pacaraima,
+      'Nickerie': Nickerie,
+      'Corriverton': Corriverton
+    };
+    
+    // Mapeamento de cidades para descrições
+    const cityDescriptionMap: { [key: string]: string } = {
+      'Oiapoque': 'Imagens da cidade de Oiapoque, mostrando seus pontos turísticos, cultura e cotidiano no extremo norte do Brasil.',
+      'Saint-Georges': 'A comuna de Saint-Georges-de-l\'Oyapock, sua arquitetura francesa, paisagens amazônicas e cultura local.',
+      'Bonfim': 'Bonfim, município de Roraima na fronteira com a Guiana, mostrando o comércio fronteiriço e a ponte internacional.',
+      'Lethem': 'Lethem, importante centro comercial da Guiana na fronteira com o Brasil, sua cultura diversificada e arquitetura colonial.',
+      'Saint-Laurent-du-Maroni': 'Saint-Laurent-du-Maroni, antiga cidade penitenciária, hoje patrimônio histórico e cultural da Guiana Francesa.',
+      'Santa Elena de Uairén': 'Santa Elena de Uairén, porta de entrada venezuelana ao Monte Roraima e rica diversidade cultural indígena.',
+      'Pacaraíma': 'Pacaraíma, município brasileiro na fronteira com a Venezuela, conhecido pela proximidade com o Monte Roraima.',
+      'Nickerie': 'Nickerie, centro agrícola do oeste surinamês, conhecido pela produção de arroz e comércio regional.',
+      'Corriverton': 'Corriverton, cidade costeira da Guiana, importante centro comercial e pesqueiro na foz do rio Berbice.'
+    };
+    
+    // Função para abrir galeria no POTEDES
+    const openGallery = (cityName: string) => {
+      const url = cityUrlMap[cityName];
+      if (url) {
+        window.open(url, '_blank');
+      }
+    };
+    
+    // Obter dados das cidades atuais
+    const cityAImage = cityImageMap[cityA] || Oiapoque;
+    const cityBImage = cityImageMap[cityB] || SaintGeorges;
+    const cityADescription = cityDescriptionMap[cityA] || `Imagens da cidade de ${cityA}, mostrando seus pontos turísticos, cultura e cotidiano.`;
+    const cityBDescription = cityDescriptionMap[cityB] || `A comuna de ${cityB}, sua arquitetura, paisagens e cultura local.`;
+    
     return (
       <div className="mb-10">
         <h2 className="text-2xl font-bold mb-6 text-center">Galerias de Imagens</h2>
@@ -1385,7 +1444,7 @@ const LocationDetails = () => {
           <div 
             className="relative rounded-xl overflow-hidden shadow-lg h-48 sm:h-64 md:h-96"
             style={{ 
-              backgroundImage: `url(${Oiapoque})`,
+              backgroundImage: `url(${cityAImage})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}
@@ -1393,9 +1452,12 @@ const LocationDetails = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20"></div>
             <div className="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end">
               <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2">{cityA}</h3>
-              <p className="text-xs sm:text-sm md:text-base text-white/90 mb-2 sm:mb-4">Imagens da cidade de {cityA}, mostrando seus pontos turísticos, cultura e cotidiano.</p>
-              <button className="w-full mt-1 sm:mt-2 py-1.5 sm:py-2 sm:py-3 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors">
-                Ver galeria
+              {/*<p className="text-xs sm:text-sm md:text-base text-white/90 mb-2 sm:mb-4">{cityADescription}</p>*/}
+              <button 
+                onClick={() => openGallery(cityA)}
+                className="w-full mt-1 sm:mt-2 py-1.5 sm:py-2 sm:py-3 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Ver galeria no POTEDES
               </button>
             </div>
           </div>
@@ -1403,7 +1465,7 @@ const LocationDetails = () => {
           <div 
             className="relative rounded-xl overflow-hidden shadow-lg h-48 sm:h-64 md:h-96"
             style={{ 
-              backgroundImage: `url(${SaintGeorges})`,
+              backgroundImage: `url(${cityBImage})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}
@@ -1411,9 +1473,12 @@ const LocationDetails = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20"></div>
             <div className="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end">
               <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1 sm:mb-2">{cityB}</h3>
-              <p className="text-xs sm:text-sm md:text-base text-white/90 mb-2 sm:mb-4">A comuna de {cityB}, sua arquitetura, paisagens e cultura local.</p>
-              <button className="w-full mt-1 sm:mt-2 py-1.5 sm:py-2 sm:py-3 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors">
-                Ver galeria
+              {/*<p className="text-xs sm:text-sm md:text-base text-white/90 mb-2 sm:mb-4">{cityBDescription}</p>*/}
+              <button 
+                onClick={() => openGallery(cityB)}
+                className="w-full mt-1 sm:mt-2 py-1.5 sm:py-2 sm:py-3 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Ver galeria no POTEDES
               </button>
             </div>
           </div>
