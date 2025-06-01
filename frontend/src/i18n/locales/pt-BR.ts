@@ -36,7 +36,22 @@ export default {
       }
     },
     locationDetails: {
-      notFound: 'Localidade não encontrada',
+      loading: 'Carregando...',
+      notFound: {
+        title: 'Localização não encontrada',
+        message: 'Não foram encontrados dados para a localização solicitada.',
+        backButton: 'Voltar para o início'
+      },
+      error: {
+        title: 'Erro ao carregar dados',
+        backButton: 'Voltar para o início',
+        connectionFailed: 'Não foi possível conectar ao servidor. Verifique se a API está em execução.',
+        cityNotFound: 'Não foram encontrados dados para a cidade com ID {{id}}.',
+        serverError: 'Erro do servidor: {{status}} - {{statusText}}',
+        networkError: 'Erro de conexão com o servidor.',
+        generalError: 'Erro: {{message}}',
+        unknownError: 'Ocorreu um erro desconhecido ao carregar os dados.'
+      },
       indicators: {
         title: 'Indicadores',
         population: 'População',
@@ -44,14 +59,16 @@ export default {
         gdp: 'PIB per capita',
         hdi: 'IDH'
       },
-      gallery: {
-        title: 'Galeria',
-        fortressTitle: 'Fortaleza de São José',
-        marcoZeroTitle: 'Marco Zero',
-        waterfrontTitle: 'Beira Rio'
+      galleries: {
+        title: 'Galerias',
+        imageGalleries: 'Galerias de Imagens',
+        viewGalleryButton: 'Ver galeria no POTEDES'
       },
       digitalCollection: {
         title: 'Acervo Digital',
+        noDocuments: 'Nenhum documento encontrado.',
+        noDate: 'N/D',
+        unknownAuthor: 'Autor desconhecido',
         searchFilters: 'Filtros de Busca',
         search: {
           general: 'Busca geral...',
@@ -60,23 +77,28 @@ export default {
           tags: 'Tags...'
         },
         tabs: {
-          books: 'Livros',
-          reports: 'Relatórios',
-          articles: 'Artigos',
-          others: 'Outros'
+          livros: 'Livros',
+          relatorios: 'Relatórios',
+          artigos: 'Artigos',
+          outros: 'Outros'
         },
         table: {
           title: 'Título',
           author: 'Autor',
           year: 'Ano',
-          format: 'Formato',
-          size: 'Tamanho',
-          tags: 'Tags',
-          actions: 'Ações'
+          category: 'Categoria',
+          action: 'Ação'
         },
         actions: {
-          view: 'Visualizar documento',
-          download: 'Baixar documento'
+          access: 'Acessar',
+          download: 'Download',
+          unavailable: 'Indisponível'
+        },
+        categories: {
+          books: 'Livros',
+          reports: 'Relatórios',
+          articles: 'Artigos',
+          others: 'Outros'
         }
       },
       categories: {
@@ -107,7 +129,7 @@ export default {
         education: 'Não há dados de educação disponíveis para esta cidade.',
         environment: 'Não há dados de meio ambiente disponíveis para esta cidade.'
       },
-      yearPeriod: 'Ano:',
+      yearPeriod: 'Período:',
       source: 'Fonte:',
       moreIndicators: {
         health: 'Mais Indicadores de Saúde',

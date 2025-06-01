@@ -36,7 +36,22 @@ export default {
       }
     },
     locationDetails: {
-      notFound: 'Localité non trouvée',
+      loading: 'Chargement...',
+      notFound: {
+        title: 'Emplacement non trouvé',
+        message: 'Aucune donnée trouvée pour l\'emplacement demandé.',
+        backButton: 'Retour à l\'accueil'
+      },
+      error: {
+        title: 'Erreur lors du chargement des données',
+        backButton: 'Retour à l\'accueil',
+        connectionFailed: 'Impossible de se connecter au serveur. Veuillez vérifier si l\'API fonctionne.',
+        cityNotFound: 'Aucune donnée trouvée pour la ville avec l\'ID {{id}}.',
+        serverError: 'Erreur serveur: {{status}} - {{statusText}}',
+        networkError: 'Erreur de connexion avec le serveur.',
+        generalError: 'Erreur: {{message}}',
+        unknownError: 'Une erreur inconnue s\'est produite lors du chargement des données.'
+      },
       indicators: {
         title: 'Indicateurs',
         population: 'Population',
@@ -44,39 +59,46 @@ export default {
         gdp: 'PIB par habitant',
         hdi: 'IDH'
       },
-      gallery: {
-        title: 'Galerie',
-        fortressTitle: 'Forteresse de Saint-Joseph',
-        marcoZeroTitle: 'Point Zéro',
-        waterfrontTitle: 'Bord de Rivière'
+      galleries: {
+        title: 'Galeries',
+        imageGalleries: 'Galeries d\'Images',
+        viewGalleryButton: 'Voir la galerie sur POTEDES'
       },
       digitalCollection: {
         title: 'Collection Numérique',
+        noDocuments: 'Aucun document trouvé.',
+        noDate: 'N/D',
+        unknownAuthor: 'Auteur inconnu',
         searchFilters: 'Filtres de Recherche',
         search: {
           general: 'Recherche générale...',
           year: 'Année...',
           author: 'Auteur...',
-          tags: 'Mots-clés...'
+          tags: 'Tags...'
         },
         tabs: {
-          books: 'Livres',
-          reports: 'Rapports',
-          articles: 'Articles',
-          others: 'Autres'
+          livros: 'Livres',
+          relatorios: 'Rapports',
+          artigos: 'Articles',
+          outros: 'Autres'
         },
         table: {
           title: 'Titre',
           author: 'Auteur',
           year: 'Année',
-          format: 'Format',
-          size: 'Taille',
-          tags: 'Mots-clés',
-          actions: 'Actions'
+          category: 'Catégorie',
+          action: 'Action'
         },
         actions: {
-          view: 'Voir le document',
-          download: 'Télécharger le document'
+          access: 'Accéder',
+          download: 'Télécharger',
+          unavailable: 'Indisponible'
+        },
+        categories: {
+          books: 'Livres',
+          reports: 'Rapports',
+          articles: 'Articles',
+          others: 'Autres'
         }
       },
       categories: {
@@ -107,14 +129,14 @@ export default {
         education: 'Aucune donnée d\'éducation disponible pour cette ville.',
         environment: 'Aucune donnée environnementale disponible pour cette ville.'
       },
-      yearPeriod: 'Année:',
+      yearPeriod: 'Période:',
       source: 'Source:',
       moreIndicators: {
         health: 'Plus d\'Indicateurs de Santé',
         population: 'Plus d\'Indicateurs de Population',
         commerce: 'Plus d\'Indicateurs de Commerce',
         education: 'Plus d\'Indicateurs d\'Éducation',
-        environment: 'Plus d\'Indicateurs Environnementaux'
+        environment: 'Plus d\'Indicateurs d\'Environnement'
       }
     },
     collaborate: {

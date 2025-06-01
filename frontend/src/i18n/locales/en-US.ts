@@ -36,7 +36,22 @@ export default {
       }
     },
     locationDetails: {
-      notFound: 'Location not found',
+      loading: 'Loading...',
+      notFound: {
+        title: 'Location not found',
+        message: 'No data found for the requested location.',
+        backButton: 'Back to home'
+      },
+      error: {
+        title: 'Error loading data',
+        backButton: 'Back to home',
+        connectionFailed: 'Unable to connect to server. Please check if API is running.',
+        cityNotFound: 'No data found for city with ID {{id}}.',
+        serverError: 'Server error: {{status}} - {{statusText}}',
+        networkError: 'Connection error with server.',
+        generalError: 'Error: {{message}}',
+        unknownError: 'An unknown error occurred while loading data.'
+      },
       indicators: {
         title: 'Indicators',
         population: 'Population',
@@ -44,14 +59,16 @@ export default {
         gdp: 'GDP per capita',
         hdi: 'HDI'
       },
-      gallery: {
-        title: 'Gallery',
-        fortressTitle: 'São José Fortress',
-        marcoZeroTitle: 'Zero Milestone',
-        waterfrontTitle: 'Riverfront'
+      galleries: {
+        title: 'Galleries',
+        imageGalleries: 'Image Galleries',
+        viewGalleryButton: 'View gallery on POTEDES'
       },
       digitalCollection: {
         title: 'Digital Collection',
+        noDocuments: 'No documents found.',
+        noDate: 'N/A',
+        unknownAuthor: 'Unknown author',
         searchFilters: 'Search Filters',
         search: {
           general: 'General search...',
@@ -60,23 +77,28 @@ export default {
           tags: 'Tags...'
         },
         tabs: {
-          books: 'Books',
-          reports: 'Reports',
-          articles: 'Articles',
-          others: 'Others'
+          livros: 'Books',
+          relatorios: 'Reports',
+          artigos: 'Articles',
+          outros: 'Others'
         },
         table: {
           title: 'Title',
           author: 'Author',
           year: 'Year',
-          format: 'Format',
-          size: 'Size',
-          tags: 'Tags',
-          actions: 'Actions'
+          category: 'Category',
+          action: 'Action'
         },
         actions: {
-          view: 'View document',
-          download: 'Download document'
+          access: 'Access',
+          download: 'Download',
+          unavailable: 'Unavailable'
+        },
+        categories: {
+          books: 'Books',
+          reports: 'Reports',
+          articles: 'Articles',
+          others: 'Others'
         }
       },
       categories: {
@@ -107,7 +129,7 @@ export default {
         education: 'No education data available for this city.',
         environment: 'No environment data available for this city.'
       },
-      yearPeriod: 'Year:',
+      yearPeriod: 'Period:',
       source: 'Source:',
       moreIndicators: {
         health: 'More Health Indicators',

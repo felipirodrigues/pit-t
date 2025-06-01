@@ -370,20 +370,20 @@ const LocationDetails = () => {
         // Definir mensagem de erro apropriada
         if (axios.isAxiosError(err)) {
           if (err.code === 'ECONNREFUSED' || err.code === 'ERR_NETWORK') {
-            setError('Não foi possível conectar ao servidor. Verifique se a API está em execução.');
+            setError(t('locationDetails.error.connectionFailed'));
           } else if (err.response) {
             if (err.response.status === 404) {
-              setError(`Não foram encontrados dados para a cidade com ID ${id}.`);
+              setError(t('locationDetails.error.cityNotFound', { id }));
             } else {
-              setError(`Erro do servidor: ${err.response.status} - ${err.response.statusText}`);
+              setError(t('locationDetails.error.serverError', { status: err.response.status, statusText: err.response.statusText }));
             }
           } else {
-            setError('Erro de conexão com o servidor.');
+            setError(t('locationDetails.error.networkError'));
           }
         } else if (err instanceof Error) {
-          setError(`Erro: ${err.message}`);
+          setError(t('locationDetails.error.generalError', { message: err.message }));
         } else {
-          setError('Ocorreu um erro desconhecido ao carregar os dados.');
+          setError(t('locationDetails.error.unknownError'));
         }
       } finally {
         setLoading(false);
@@ -494,13 +494,8 @@ const LocationDetails = () => {
 
   // Adicionar função auxiliar para traduzir categorias
   const translateCategory = (category: string): string => {
-    const categoryMap: { [key: string]: string } = {
-      'books': 'Livros',
-      'reports': 'Relatórios',
-      'articles': 'Artigos',
-      'others': 'Outros'
-    };
-    return categoryMap[category.toLowerCase()] || category;
+    const categoryKey = category.toLowerCase();
+    return t(`locationDetails.digitalCollection.categories.${categoryKey}`, { defaultValue: category });
   };
 
   // Função para renderizar um card genérico com cor personalizada (para população, desenvolvimento, etc.)
@@ -1218,27 +1213,21 @@ const LocationDetails = () => {
   const renderDigitalCollectionContent = () => {
     // Seleciona os dados reais da API conforme a aba ativa
     let data: any[] = [];
-    let headers: string[] = [];
     switch(activeTab) {
       case 'livros':
         data = digitalCollection.livros;
-        headers = ['Título', 'Autor', 'Ano', 'Categoria', 'Ação'];
         break;
       case 'relatorios':
         data = digitalCollection.relatorios;
-        headers = ['Título', 'Autor', 'Ano', 'Categoria', 'Ação'];
         break;
       case 'artigos':
         data = digitalCollection.artigos;
-        headers = ['Título', 'Autor', 'Ano', 'Categoria', 'Ação'];
         break;
       case 'outros':
         data = digitalCollection.outros;
-        headers = ['Título', 'Autor', 'Ano', 'Categoria', 'Ação'];
         break;
       default:
         data = [];
-        headers = [];
     }
 
     // Gerar uma cor baseada na categoria
@@ -1260,7 +1249,7 @@ const LocationDetails = () => {
       if (data.length === 0) {
         return (
           <div className="bg-white rounded-lg p-4 text-center text-gray-500 shadow-sm border border-gray-100">
-            Nenhum documento encontrado.
+            {t('locationDetails.digitalCollection.noDocuments')}
           </div>
         );
       }
@@ -1270,12 +1259,12 @@ const LocationDetails = () => {
           {data.map((item) => {
             const categoryColor = getCategoryColor(item.category);
             const actionLabel = item.kind === 'external' && item.external_url 
-              ? 'Acessar' 
+              ? t('locationDetails.digitalCollection.actions.access')
               : item.file_url 
-                ? 'Download' 
-                : 'Indisponível';
+                ? t('locationDetails.digitalCollection.actions.download')
+                : t('locationDetails.digitalCollection.actions.unavailable');
             
-            const actionColor = actionLabel === 'Indisponível' 
+            const actionColor = actionLabel === t('locationDetails.digitalCollection.actions.unavailable')
               ? 'text-gray-400' 
               : 'text-green-600 hover:text-green-900';
 
@@ -1294,10 +1283,10 @@ const LocationDetails = () => {
                       href={item.external_url || item.file_url || '#'} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className={`${actionLabel === 'Indisponível' ? 'pointer-events-none' : ''} ${
-                        actionLabel === 'Acessar' 
+                      className={`${actionLabel === t('locationDetails.digitalCollection.actions.unavailable') ? 'pointer-events-none' : ''} ${
+                        actionLabel === t('locationDetails.digitalCollection.actions.access')
                           ? 'bg-blue-100 text-blue-800'
-                          : actionLabel === 'Download'
+                          : actionLabel === t('locationDetails.digitalCollection.actions.download')
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-600'
                       } text-xs px-2 py-1 rounded-full`}
@@ -1308,10 +1297,10 @@ const LocationDetails = () => {
                   
                   <div className="mt-1 text-xs text-gray-500 flex items-center">
                     <span className="inline-flex items-center">
-                      <FileText className="w-3 h-3 mr-1" /> {item.publication_year || 'N/D'}
+                      <FileText className="w-3 h-3 mr-1" /> {item.publication_year || t('locationDetails.digitalCollection.noDate')}
                     </span>
                     <span className="mx-2">•</span>
-                    <span>{item.author || 'Autor desconhecido'}</span>
+                    <span>{item.author || t('locationDetails.digitalCollection.unknownAuthor')}</span>
                   </div>
                   
                   <div className="mt-1 text-xs text-gray-400">
@@ -1327,6 +1316,14 @@ const LocationDetails = () => {
 
     // Versão desktop: tabela
     const renderDesktopTable = () => {
+      const headers = [
+        t('locationDetails.digitalCollection.table.title'),
+        t('locationDetails.digitalCollection.table.author'),
+        t('locationDetails.digitalCollection.table.year'),
+        t('locationDetails.digitalCollection.table.category'),
+        t('locationDetails.digitalCollection.table.action')
+      ];
+
       return (
         <table className="min-w-full bg-white rounded-lg overflow-hidden">
           <thead className="bg-green-50">
@@ -1343,7 +1340,7 @@ const LocationDetails = () => {
           </thead>
           <tbody className="divide-y divide-green-100">
             {data.length === 0 ? (
-              <tr><td colSpan={headers.length} className="px-6 py-4 text-center text-gray-500">Nenhum documento encontrado.</td></tr>
+              <tr><td colSpan={headers.length} className="px-6 py-4 text-center text-gray-500">{t('locationDetails.digitalCollection.noDocuments')}</td></tr>
             ) : data.map((item) => (
               <tr key={item.id} className="hover:bg-green-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.title}</td>
@@ -1352,11 +1349,11 @@ const LocationDetails = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{translateCategory(item.category)}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {item.kind === 'external' && item.external_url ? (
-                    <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-900">Acessar</a>
+                    <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-900">{t('locationDetails.digitalCollection.actions.access')}</a>
                   ) : item.file_url ? (
-                    <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-900">Download</a>
+                    <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-900">{t('locationDetails.digitalCollection.actions.download')}</a>
                   ) : (
-                    <span className="text-gray-400">Indisponível</span>
+                    <span className="text-gray-400">{t('locationDetails.digitalCollection.actions.unavailable')}</span>
                   )}
                 </td>
               </tr>
@@ -1439,7 +1436,7 @@ const LocationDetails = () => {
     
     return (
       <div className="mb-10">
-        <h2 className="text-2xl font-bold mb-6 text-center">Galerias de Imagens</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">{t('locationDetails.galleries.imageGalleries')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
           <div 
             className="relative rounded-xl overflow-hidden shadow-lg h-48 sm:h-64 md:h-96"
@@ -1457,7 +1454,7 @@ const LocationDetails = () => {
                 onClick={() => openGallery(cityA)}
                 className="w-full mt-1 sm:mt-2 py-1.5 sm:py-2 sm:py-3 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
               >
-                Ver galeria no POTEDES
+                {t('locationDetails.galleries.viewGalleryButton')}
               </button>
             </div>
           </div>
@@ -1478,7 +1475,7 @@ const LocationDetails = () => {
                 onClick={() => openGallery(cityB)}
                 className="w-full mt-1 sm:mt-2 py-1.5 sm:py-2 sm:py-3 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
               >
-                Ver galeria no POTEDES
+                {t('locationDetails.galleries.viewGalleryButton')}
               </button>
             </div>
           </div>
@@ -1849,7 +1846,7 @@ const LocationDetails = () => {
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center">
           <div className="animate-spin w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full mb-4"></div>
-          <div className="text-xl text-gray-600">Carregando...</div>
+          <div className="text-xl text-gray-600">{t('locationDetails.loading')}</div>
         </div>
       </div>
     );
@@ -1860,14 +1857,14 @@ const LocationDetails = () => {
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 max-w-md text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-red-700 mb-2">Erro ao carregar dados</h2>
+          <h2 className="text-2xl font-bold text-red-700 mb-2">{t('locationDetails.error.title')}</h2>
           <p className="text-red-600 mb-6">{error}</p>
           <div className="flex justify-center">
             <button 
               onClick={() => window.location.href = '/'}
               className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
-              Voltar para o início
+              {t('locationDetails.error.backButton')}
             </button>
           </div>
         </div>
@@ -1880,16 +1877,16 @@ const LocationDetails = () => {
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-8 max-w-md text-center">
           <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-amber-700 mb-2">Localização não encontrada</h2>
+          <h2 className="text-2xl font-bold text-amber-700 mb-2">{t('locationDetails.notFound.title')}</h2>
           <p className="text-amber-600 mb-6">
-            Não foram encontrados dados para a localização solicitada.
+            {t('locationDetails.notFound.message')}
           </p>
           <div className="flex justify-center">
             <button 
               onClick={() => window.location.href = '/'}
               className="bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
-              Voltar para o início
+              {t('locationDetails.notFound.backButton')}
             </button>
           </div>
         </div>
@@ -2192,7 +2189,7 @@ const LocationDetails = () => {
         {/* Quarta linha - Acervo Digital */}
         <div className="mt-8 sm:mt-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-800 text-center mb-4 sm:mb-8">
-            Acervo Digital
+            {t('locationDetails.digitalCollection.title')}
           </h2>
           
           {/* Tabs - Versão mobile: Dropdown selector */}
@@ -2204,7 +2201,7 @@ const LocationDetails = () => {
             >
               {tabs.map((tab) => (
                 <option key={tab.id} value={tab.id}>
-                  {tab.label}
+                  {t(`locationDetails.digitalCollection.tabs.${tab.id}`)}
                 </option>
               ))}
             </select>
@@ -2221,7 +2218,7 @@ const LocationDetails = () => {
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${activeTab === tab.id ? 'bg-green-500 text-white' : 'bg-white text-green-700 hover:bg-green-100'}`}
                 >
                   <TabIcon className="w-5 h-5" />
-                  {tab.label}
+                  {t(`locationDetails.digitalCollection.tabs.${tab.id}`)}
               </button>
               );
             })}
@@ -2237,7 +2234,7 @@ const LocationDetails = () => {
         {/* Quinta linha - Galerias */}
         <div className="mt-8 sm:mt-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-800 text-center mb-4 sm:mb-8">
-            Galerias
+            {t('locationDetails.galleries.title')}
           </h2>
           <div className="bg-white rounded-lg shadow-md p-3 sm:p-6">
             {renderGalleries()}
