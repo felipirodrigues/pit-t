@@ -1,27 +1,37 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import Globe from 'react-globe.gl';
-import { MapPin, Search, ZoomIn, ZoomOut, RotateCcw, Loader2, Menu } from 'lucide-react';
-import * as THREE from 'three';
+import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl, GeoJSON } from 'react-leaflet';
+import { MapPin, ZoomIn, ZoomOut, RotateCcw, Loader2, Menu, Navigation } from 'lucide-react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import Sidebar from '../components/layout/Sidebar';
-import clouds from '../images/clouds.png';
-import api, { API_BASE_URL } from '../services/api';
-import logoPitt from '../images/logo-potedes.png'; // Importe a logo do sistema
-import map from '../images/mapa.jpg';
+import api from '../services/api';
+import logoPitt from '../images/logo-potedes.png';
+import { kml } from '@tmcw/togeojson';
 
-// Estilos para os marcadores do mapa
-const markerStyles = `
-.marker-element {
-  position: relative;
-  transform: translate(-50%, -50%);
-  transition: all 0.1s ease;
-}
+// Corrigir ícones do Leaflet
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 
-.marker-element:hover {
-  transform: translate(-50%, -50%) scale(0.3);
-}
-`;
+let DefaultIcon = L.divIcon({
+  html: `<div style="
+    background-color: #feca57;
+    width: 25px;
+    height: 25px;
+    border-radius: 50% 50% 50% 0;
+    border: 3px solid #fff;
+    transform: rotate(-45deg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  "></div>`,
+  iconSize: [25, 25],
+  iconAnchor: [12, 24],
+  popupAnchor: [1, -24],
+  className: 'custom-div-icon'
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface TwinCity {
   id: number;
@@ -34,68 +44,35 @@ interface TwinCity {
   description?: string;
 }
 
-interface CloudData {
-  lat: number;
-  lng: number;
-  size: number;
-  alt: number;
-  cloudColor: string;
-  rotateSpeed: number;
-}
-
-// Cores diferentes para cada par de cidades gêmeas
-const TWIN_CITY_COLORS = [
-  '#feca57', // Amarelo (cor única para todos os marcadores)
-];
+// Componente para controlar o mapa
+const MapController = ({ center, zoom }: { center: [number, number], zoom: number }) => {
+  const map = useMap();
+  
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [map, center, zoom]);
+  
+  return null;
+};
 
 const Home = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [twinCities, setTwinCities] = useState<TwinCity[]>([]);
   const [filteredTwinCities, setFilteredTwinCities] = useState<TwinCity[]>([]);
-  const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const [dimensions, setDimensions] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight
-  });
-  const [isGlobeReady, setGlobeReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const globeRef = useRef<any>();
-  
-  // Gerar dados de nuvens
-  const [cloudsData, setCloudsData] = useState<CloudData[]>([]);
-  
-  useEffect(() => {
-    // Gerar camadas de nuvens
-    const cloudsArray: CloudData[] = [];
-    const numClouds = 2;
-    
-    for (let i = 0; i < numClouds; i++) {
-      const phi = Math.random() * Math.PI * 2;
-      const theta = Math.random() * Math.PI - Math.PI / 2;
-      
-      cloudsArray.push({
-        lat: (theta * 180) / Math.PI,
-        lng: (phi * 180) / Math.PI,
-        size: Math.random() / 3 + 0.1,
-        alt: Math.random() * 0.3 + 0.1,
-        cloudColor: '#ffffff', // Cor sólida para evitar problemas de RGBA
-        rotateSpeed: Math.random() / 150
-      });
-    }
-    
-    setCloudsData(cloudsArray);
-  }, []);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-14.235, -51.9253]);
+  const [mapZoom, setMapZoom] = useState(4);
+  const [countryBorders, setCountryBorders] = useState<any>(null);
+  const [pittRegion, setPittRegion] = useState<any>(null);
 
   // Atualizar dimensões quando a janela for redimensionada
   const handleResize = useCallback(() => {
     const width = window.innerWidth;
-    const height = window.innerHeight;
-    
-    setDimensions({ width, height });
     setIsMobile(width < 768);
   }, []);
 
@@ -108,17 +85,61 @@ const Home = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsLoading(true);
         const response = await api.get('/twin-cities');
         setTwinCities(response.data);
         setFilteredTwinCities(response.data);
+        console.log('Cidades gêmeas carregadas:', response.data);
       } catch (error) {
         console.error('Erro ao buscar dados das cidades gêmeas:', error);
         setTwinCities([]);
         setFilteredTwinCities([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchData();
+  }, []);
+
+  // Carregar dados das fronteiras dos países
+  useEffect(() => {
+    const fetchCountryBorders = async () => {
+      try {
+        // Usar uma API pública que fornece fronteiras dos países em GeoJSON
+        const response = await fetch('https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson');
+        const geojsonData = await response.json();
+        setCountryBorders(geojsonData);
+        console.log('Fronteiras dos países carregadas');
+      } catch (error) {
+        console.error('Erro ao carregar fronteiras dos países:', error);
+      }
+    };
+
+    fetchCountryBorders();
+  }, []);
+
+  // Carregar dados da região PIT-T do arquivo KML
+  useEffect(() => {
+    const fetchPittRegion = async () => {
+      try {
+        // Carregar o arquivo KML
+        const response = await fetch('/pitt.kml');
+        const kmlText = await response.text();
+        
+        // Converter KML para GeoJSON
+        const parser = new DOMParser();
+        const kmlDoc = parser.parseFromString(kmlText, 'text/xml');
+        const geojsonData = kml(kmlDoc);
+        
+        setPittRegion(geojsonData);
+        console.log('Região PIT-T carregada:', geojsonData);
+      } catch (error) {
+        console.error('Erro ao carregar região PIT-T:', error);
+      }
+    };
+
+    fetchPittRegion();
   }, []);
 
   // Função para filtrar cidades gêmeas
@@ -137,49 +158,80 @@ const Home = () => {
     }
   }, [searchTerm, twinCities]);
 
-  // Foco automático no Brasil
-  useEffect(() => {
-    if (globeRef.current) {
-      globeRef.current.pointOfView({ lat: -14.235, lng: -51.9253, altitude: 0.9 });
-      
-      // Configurar rotação automática
-      globeRef.current.controls().autoRotate = true;
-      globeRef.current.controls().autoRotateSpeed = 0.04;
-    }
-  }, []);
+  // Estilo para as fronteiras dos países
+  const countryStyle = {
+    fillColor: 'transparent',
+    weight: 2,
+    opacity: 0.8,
+    color: '#ffffff',
+    dashArray: '3',
+    fillOpacity: 0,
+    interactive: false,
+    bubblingMouseEvents: false
+  };
 
-  // Função para determinar a cor dos pontos baseado em hover
-  const getTwinCityColor = (twinCity: TwinCity) => {
-    if (twinCity.id === hoveredId) return '#54a0ff'; // Azul quando hover
+  // Estilo para a região PIT-T (contorno amarelo)
+  const pittRegionStyle = {
+    fillColor: '#ffd700', // Amarelo dourado
+    weight: 4,
+    opacity: 1,
+    color: '#ffd700', // Contorno amarelo
+    fillOpacity: 0.1,
+    interactive: false,
+    bubblingMouseEvents: false
+  };
+
+  // Função para remover completamente todos os efeitos de interação
+  const onEachCountry = (feature: any, layer: any) => {
+    // Remover completamente todos os eventos de interação
+    layer.off(); // Remove todos os event listeners
     
-    // Retorna a cor amarela para todos os pontos
-    return '#feca57';
+    // Desabilitar interatividade completamente
+    layer.options.interactive = false;
+    
+    // Remover eventos específicos se existirem
+    layer.on({
+      click: (e: any) => {
+        // Prevenir propagação do evento
+        e.originalEvent.stopPropagation();
+        e.originalEvent.preventDefault();
+        return false;
+      },
+      mouseover: () => false,
+      mouseout: () => false,
+      contextmenu: () => false,
+      dblclick: () => false
+    });
+
+    // Garantir que nenhum popup ou tooltip seja criado
+    layer.unbindPopup();
+    layer.unbindTooltip();
   };
 
-  // Funções para controle do zoom
-  const handleZoom = (direction: 'in' | 'out') => {
-    if (globeRef.current) {
-      const currentPOV = globeRef.current.pointOfView();
-      const newAltitude = direction === 'in' 
-        ? Math.max(0.5, currentPOV.altitude * 0.7)
-        : Math.min(10, currentPOV.altitude * 1.3);
-      
-      globeRef.current.pointOfView({
-        ...currentPOV,
-        altitude: newAltitude
-      }, 300);
+  // Função para processar a região PIT-T
+  const onEachPittRegion = (feature: any, layer: any) => {
+    // Adicionar tooltip com nome da região
+    if (feature.properties && feature.properties.name) {
+      layer.bindTooltip(feature.properties.name, {
+        permanent: false,
+        direction: 'center',
+        className: 'pitt-region-tooltip'
+      });
     }
   };
 
-  // Função para resetar a visão do globo
+  // Funções para controle do mapa
+  const handleZoomIn = () => {
+    setMapZoom(prev => Math.min(prev + 1, 18));
+  };
+
+  const handleZoomOut = () => {
+    setMapZoom(prev => Math.max(prev - 1, 2));
+  };
+
   const resetView = () => {
-    if (globeRef.current) {
-      globeRef.current.pointOfView({ 
-        lat: -14.235, 
-        lng: -51.9253, 
-        altitude: 2.5 
-      }, 1000);
-    }
+    setMapCenter([-14.235, -51.9253]);
+    setMapZoom(4);
   };
 
   // Função para navegar para a página de detalhes
@@ -189,7 +241,6 @@ const Home = () => {
 
   // Função para alternar a visibilidade da sidebar no mobile
   const toggleSidebar = () => {
-    // Aqui podemos adicionar lógica para mostrar/esconder a sidebar no mobile
     setIsSidebarOpen(!isSidebarOpen);
     const sidebarElement = document.querySelector('.sidebar');
     if (sidebarElement) {
@@ -197,49 +248,118 @@ const Home = () => {
     }
   };
 
-  // Adicionar camada de nuvens usando Three.js
-  useEffect(() => {
-    if (globeRef.current && isGlobeReady) {
-      const globe = globeRef.current;
-      
-      // URL correta da textura das nuvens
-      const CLOUDS_IMG_URL = clouds; // Usar a imagem importada
-      const CLOUDS_ALT = 0.004;
-      const CLOUDS_ROTATION_SPEED = -0.006; // deg/frame
-      
-      // Carregar a textura das nuvens
-      new (THREE as any).TextureLoader().load(CLOUDS_IMG_URL, (cloudsTexture: any) => {
-        // Criar uma esfera para as nuvens
-        const cloudsLayer = new (THREE as any).Mesh(
-          new (THREE as any).SphereGeometry(globe.getGlobeRadius() * (1 + CLOUDS_ALT), 75, 75),
-          new (THREE as any).MeshPhongMaterial({
-            map: cloudsTexture,
-            transparent: true,
-            opacity: 0.8
-          })
-        );
-        
-        // Adicionar à cena
-        globe.scene().add(cloudsLayer);
-        
-        // Rotação inicial para posicionar corretamente
-        cloudsLayer.rotation.x = Math.PI / 8;
-        
-        // Animação para rotacionar as nuvens
-        (function rotateClouds() {
-          cloudsLayer.rotation.y += CLOUDS_ROTATION_SPEED * Math.PI / 180;
-          requestAnimationFrame(rotateClouds);
-        })();
-      });
-    }
-  }, [isGlobeReady]);
+  // Função para focar em uma cidade
+  const focusOnCity = (city: TwinCity) => {
+    const midLat = (city.cityA_latitude + city.cityB_latitude) / 2;
+    const midLng = (city.cityA_longitude + city.cityB_longitude) / 2;
+    
+    setMapCenter([midLat, midLng]);
+    setMapZoom(8);
+    
+    // Aguardar a animação antes de navegar
+    setTimeout(() => {
+      handleLocationClick(city.id);
+    }, 1000);
+  };
+
+  // Criar marcadores para cada cidade do par
+  const createMarkers = () => {
+    const markers: JSX.Element[] = [];
+    
+    filteredTwinCities.forEach((city) => {
+      // Marcador para Cidade A
+      markers.push(
+        <Marker
+          key={`${city.id}-A`}
+          position={[city.cityA_latitude, city.cityA_longitude]}
+          icon={hoveredId === city.id ? 
+            L.divIcon({
+              html: `<div style="
+                background-color: #54a0ff;
+                width: 30px;
+                height: 30px;
+                border-radius: 50% 50% 50% 0;
+                border: 3px solid #fff;
+                transform: rotate(-45deg);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+              "></div>`,
+              iconSize: [30, 30],
+              iconAnchor: [15, 30],
+              popupAnchor: [1, -30],
+              className: 'custom-div-icon'
+            }) : DefaultIcon
+          }
+        >
+          <Popup>
+            <div className="text-center">
+              <h3 className="font-bold text-lg">{city.cityA_name}</h3>
+              <p className="text-sm text-gray-600">
+                Cidade gêmea: {city.cityB_name}
+              </p>
+              {city.description && (
+                <p className="text-sm mt-2">{city.description}</p>
+              )}
+              <button
+                onClick={() => handleLocationClick(city.id)}
+                className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+              >
+                Ver detalhes
+              </button>
+            </div>
+          </Popup>
+        </Marker>
+      );
+
+      // Marcador para Cidade B
+      markers.push(
+        <Marker
+          key={`${city.id}-B`}
+          position={[city.cityB_latitude, city.cityB_longitude]}
+          icon={hoveredId === city.id ? 
+            L.divIcon({
+              html: `<div style="
+                background-color: #54a0ff;
+                width: 30px;
+                height: 30px;
+                border-radius: 50% 50% 50% 0;
+                border: 3px solid #fff;
+                transform: rotate(-45deg);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+              "></div>`,
+              iconSize: [30, 30],
+              iconAnchor: [15, 30],
+              popupAnchor: [1, -30],
+              className: 'custom-div-icon'
+            }) : DefaultIcon
+          }
+        >
+          <Popup>
+            <div className="text-center">
+              <h3 className="font-bold text-lg">{city.cityB_name}</h3>
+              <p className="text-sm text-gray-600">
+                Cidade gêmea: {city.cityA_name}
+              </p>
+              {city.description && (
+                <p className="text-sm mt-2">{city.description}</p>
+              )}
+              <button
+                onClick={() => handleLocationClick(city.id)}
+                className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+              >
+                Ver detalhes
+              </button>
+            </div>
+          </Popup>
+        </Marker>
+      );
+    });
+    
+    return markers;
+  };
 
   return (
     <div className="fixed inset-0 overflow-hidden">
       <Sidebar />
-      
-      {/* Estilos para marcadores */}
-      <style>{markerStyles}</style>
       
       {/* Overlay para quando o sidebar estiver aberto no mobile */}
       {isSidebarOpen && (
@@ -249,119 +369,92 @@ const Home = () => {
         />
       )}
       
-      {/* Globo principal */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        {!isGlobeReady && (
-          <div className="flex flex-col items-center justify-center z-10 bg-slate-900/80 w-full h-full">
+      {/* Container do mapa */}
+      <div className="absolute inset-0">
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center z-[1001] bg-slate-900/80 w-full h-full absolute">
             <Loader2 className="animate-spin h-12 w-12 text-blue-500 mb-4" />
-            <p className="text-lg">Carregando o mapa...</p>
+            <p className="text-lg text-white mb-2">Carregando o mapa...</p>
+            <p className="text-sm text-white/60">Buscando cidades gêmeas...</p>
           </div>
         )}
-        <Globe
-          ref={globeRef}
-          width={dimensions.width}
-          height={dimensions.height}
+        
+        <MapContainer
+          center={mapCenter}
+          zoom={mapZoom}
+          style={{ height: '100%', width: '100%' }}
+          zoomControl={false}
+        >
+          <LayersControl position="topright">
+            {/* Camada de Satélite - Padrão */}
+            <LayersControl.BaseLayer checked name="Satélite">
+              <TileLayer
+                attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            
+            {/* Camada Híbrida (Satélite + Labels) */}
+            <LayersControl.BaseLayer name="Híbrido">
+              <TileLayer
+                attribution='&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+              <TileLayer
+                attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            
+            {/* Camada de Ruas (OpenStreetMap) */}
+            <LayersControl.BaseLayer name="Ruas">
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
+            
+            {/* Camada Topográfica */}
+            <LayersControl.BaseLayer name="Topográfico">
+              <TileLayer
+                attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                maxZoom={17}
+              />
+            </LayersControl.BaseLayer>
+            
+            {/* Overlay: Fronteiras dos Países */}
+            <LayersControl.Overlay checked name="Fronteiras dos Países">
+              {countryBorders && (
+                <GeoJSON
+                  data={countryBorders}
+                  style={countryStyle}
+                  onEachFeature={onEachCountry}
+                  interactive={false}
+                  bubblingMouseEvents={false}
+                />
+              )}
+            </LayersControl.Overlay>
+            
+            {/* Overlay: Região PIT-T */}
+            <LayersControl.Overlay checked name="Região das Guianas (PIT-T)">
+              {pittRegion && (
+                <GeoJSON
+                  data={pittRegion}
+                  style={pittRegionStyle}
+                  onEachFeature={onEachPittRegion}
+                />
+              )}
+            </LayersControl.Overlay>
+          </LayersControl>
           
-          // Configuração completa com texturas restauradas
-          globeImageUrl={map}
-          bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
-          backgroundImageUrl="//unpkg.com/three-globe/example/img/night-sky.png"
-          
-          // Configurações básicas
-          enablePointerInteraction={true}
-          animateIn={true}
-          waitForGlobeReady={true}
-          atmosphereColor="lightskyblue"
-          atmosphereAltitude={0.15}
-          
-          // Marcadores HTML para cidades gêmeas
-          htmlElementsData={filteredTwinCities}
-          htmlLat={(d) => (d as TwinCity).cityA_latitude}
-          htmlLng={(d) => (d as TwinCity).cityA_longitude}
-          htmlAltitude={0.002}
-          htmlElement={(d) => {
-            const el = document.createElement('div');
-            el.className = 'marker-element';
-            const twinCity = d as TwinCity;
-            const color = getTwinCityColor(twinCity);
-            el.style.color = color;
-            el.style.width = '28px';
-            el.style.height = '28px';
-            el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
-            el.style.pointerEvents = 'auto';
-            el.style.cursor = 'pointer';
-            
-            el.addEventListener('mouseenter', () => {
-              setHoverInfo(d);
-              setHoveredId((d as TwinCity).id);
-            });
-            
-            el.addEventListener('mouseleave', () => {
-              setHoverInfo(null);
-              setHoveredId(null);
-            });
-            
-            el.addEventListener('click', () => {
-              const twinCity = d as TwinCity;
-              if (globeRef.current) {
-                globeRef.current.pointOfView({ 
-                  lat: twinCity.cityA_latitude, 
-                  lng: twinCity.cityA_longitude, 
-                  altitude: 1.2
-                }, 500);
-                
-                // Aguardar a animação do globo antes de navegar
-                setTimeout(() => {
-                  handleLocationClick(twinCity.id);
-                }, 600);
-              }
-            });
-            
-            return el;
-          }}
-          onGlobeReady={() => setGlobeReady(true)}
-        />
-      </div>
-
-      {/* Nuvens como camada secundária */}
-      <div className="absolute inset-0 pointer-events-none">
-        <Globe
-          width={dimensions.width}
-          height={dimensions.height}
-          backgroundColor="transparent"
-          showGlobe={false}
-          showAtmosphere={false}
-          
-          // Nuvens
-          customLayerData={cloudsData}
-          customThreeObject={(d: any) => {
-            const cloud = d as CloudData;
-            // Criar a nuvem usando texturas
-            const cloudMaterial = new (THREE as any).SpriteMaterial({
-              map: new (THREE as any).TextureLoader().load(clouds),
-              transparent: true,
-              opacity: 0.7,
-              color: new (THREE as any).Color(cloud.cloudColor)
-            });
-            
-            const sprite = new (THREE as any).Sprite(cloudMaterial);
-            sprite.scale.set(cloud.size, cloud.size, 1);
-            return sprite;
-          }}
-          customThreeObjectUpdate={(obj: any, d: any) => {
-            const cloud = d as CloudData;
-            const globeInstance = globeRef.current;
-            
-            if (globeInstance) {
-              // Atualizar posição das nuvens
-              Object.assign(obj.position, globeInstance.getCoords(cloud.lat, cloud.lng, cloud.alt));
-              
-              // Girar lentamente as nuvens
-              cloud.lng += cloud.rotateSpeed;
-              if (cloud.lng > 180) cloud.lng -= 360;
-            }
-          }}
-        />
+          <MapController center={mapCenter} zoom={mapZoom} />
+          {createMarkers()}
+        </MapContainer>
       </div>
 
       {/* Barra superior com logo no mobile - 3 colunas */}
@@ -394,7 +487,7 @@ const Home = () => {
       </div>
 
       {/* Card Superior - Cidades Gêmeas */}
-      <div className="fixed md:right-0 bottom-0 md:top-0 md:bottom-auto w-full md:w-72 flex md:flex-col items-center justify-center pointer-events-none z-10">
+      <div className="fixed md:right-4 bottom-0 md:bottom-auto md:top-1/2 md:transform md:-translate-y-1/2 w-full md:w-72 flex md:flex-col items-center justify-center pointer-events-none z-[1000]">
         <div className="w-full md:w-full md:h-auto flex flex-col md:flex-col gap-2 md:gap-3 px-2 md:px-4">
           <div className="relative md:static flex flex-col md:h-auto bg-black/50 backdrop-blur-sm rounded-lg pointer-events-auto border border-white/10 max-h-[50vh] md:max-h-[70vh]">
             <div className="md:hidden absolute -top-6 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm rounded-full p-1 border border-white/10">
@@ -427,36 +520,9 @@ const Home = () => {
                         ? 'bg-white/20 scale-105' 
                         : 'hover:bg-white/10'
                     }`}
-                    onMouseEnter={() => {
-                      setHoverInfo({
-                        ...city,
-                        lat: Number(city.cityA_latitude),
-                        lng: Number(city.cityA_longitude)
-                      });
-                      setHoveredId(city.id);
-                    }}
-                    onMouseLeave={() => {
-                      setHoverInfo(null);
-                      setHoveredId(null);
-                    }}
-                    onClick={() => {
-                      if (globeRef.current) {
-                        // Definir um ponto médio entre as duas cidades para visualização
-                        const midLat = (city.cityA_latitude + city.cityB_latitude) / 2;
-                        const midLng = (city.cityA_longitude + city.cityB_longitude) / 2;
-                        
-                        globeRef.current.pointOfView({ 
-                          lat: midLat, 
-                          lng: midLng, 
-                          altitude: 1.5 
-                        }, 500);
-                        
-                        // Aguardar a animação do globo antes de navegar
-                        setTimeout(() => {
-                          handleLocationClick(city.id);
-                        }, 600);
-                      }
-                    }}
+                    onMouseEnter={() => setHoveredId(city.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    onClick={() => focusOnCity(city)}
                   >
                     <div 
                       className="w-5 h-5 md:w-6 md:h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-colors duration-200"
@@ -466,7 +532,7 @@ const Home = () => {
                           : '#feca57'  // Amarelo
                       }}
                     >
-                      <MapPin className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
+                      <MapPin className="w-3 h-3 md:w-3.5 md:h-3.5 text-black" />
                     </div>
                     <div className="min-w-0">
                       <h3 className="text-white text-xs md:text-sm font-medium truncate">{city.cityA_name} - {city.cityB_name}</h3>
@@ -474,7 +540,7 @@ const Home = () => {
                   </div>
                 ))}
                 
-                {filteredTwinCities.length === 0 && (
+                {filteredTwinCities.length === 0 && !isLoading && (
                   <div className="text-white/70 text-sm py-2 text-center">
                     {t('noTwinCitiesFound')}
                   </div>
@@ -486,15 +552,15 @@ const Home = () => {
       </div>
 
       {/* Controles do mapa */}
-      <div className="fixed left-4 top-20 md:top-auto md:bottom-4 z-20 flex flex-col gap-2">
+      <div className="fixed left-4 top-20 md:top-auto md:bottom-4 z-[1000] flex flex-col gap-2">
         <button
-          onClick={() => handleZoom('in')}
+          onClick={handleZoomIn}
           className="w-10 h-10 bg-black/50 backdrop-blur-sm hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
         >
           <ZoomIn className="w-6 h-6 text-white" />
         </button>
         <button
-          onClick={() => handleZoom('out')}
+          onClick={handleZoomOut}
           className="w-10 h-10 bg-black/50 backdrop-blur-sm hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
         >
           <ZoomOut className="w-6 h-6 text-white" />
@@ -506,10 +572,30 @@ const Home = () => {
           <RotateCcw className="w-6 h-6 text-white" />
         </button>
       </div>
-
-      
     </div>
   );
 };
+
+// Adicionar estilos CSS para o tooltip da região PIT-T
+const styleElement = document.createElement('style');
+styleElement.textContent = `
+  .pitt-region-tooltip {
+    background-color: rgba(255, 215, 0, 0.9) !important;
+    color: #000 !important;
+    border: 2px solid #ffd700 !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    padding: 6px 12px !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4) !important;
+  }
+  .pitt-region-tooltip::before {
+    border-top-color: rgba(255, 215, 0, 0.9) !important;
+  }
+`;
+if (!document.head.querySelector('style[data-pitt-tooltips]')) {
+  styleElement.setAttribute('data-pitt-tooltips', 'true');
+  document.head.appendChild(styleElement);
+}
 
 export default Home;

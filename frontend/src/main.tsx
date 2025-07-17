@@ -5,6 +5,8 @@ import { router } from './routes';
 import { AuthProvider } from './contexts/AuthContext';
 import './i18n';
 import './index.css';
+import '../node_modules/cesium/Build/Cesium/Widgets/widgets.css';
+import './cesium-config';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
