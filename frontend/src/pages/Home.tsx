@@ -49,7 +49,14 @@ const MapController = ({ center, zoom }: { center: [number, number], zoom: numbe
   const map = useMap();
   
   useEffect(() => {
-    map.setView(center, zoom);
+    // Validar se as coordenadas são válidas antes de aplicar
+    if (center && center.length === 2 && 
+        typeof center[0] === 'number' && typeof center[1] === 'number' &&
+        !isNaN(center[0]) && !isNaN(center[1]) && 
+        isFinite(center[0]) && isFinite(center[1]) &&
+        typeof zoom === 'number' && !isNaN(zoom) && isFinite(zoom)) {
+      map.setView(center, zoom);
+    }
   }, [map, center, zoom]);
   
   return null;
@@ -250,16 +257,29 @@ const Home = () => {
 
   // Função para focar em uma cidade
   const focusOnCity = (city: TwinCity) => {
-    const midLat = (city.cityA_latitude + city.cityB_latitude) / 2;
-    const midLng = (city.cityA_longitude + city.cityB_longitude) / 2;
+    // Validar se as coordenadas são números válidos
+    const latA = typeof city.cityA_latitude === 'number' && !isNaN(city.cityA_latitude) ? city.cityA_latitude : 0;
+    const lngA = typeof city.cityA_longitude === 'number' && !isNaN(city.cityA_longitude) ? city.cityA_longitude : 0;
+    const latB = typeof city.cityB_latitude === 'number' && !isNaN(city.cityB_latitude) ? city.cityB_latitude : 0;
+    const lngB = typeof city.cityB_longitude === 'number' && !isNaN(city.cityB_longitude) ? city.cityB_longitude : 0;
     
-    setMapCenter([midLat, midLng]);
-    setMapZoom(8);
+    const midLat = (latA + latB) / 2;
+    const midLng = (lngA + lngB) / 2;
     
-    // Aguardar a animação antes de navegar
-    setTimeout(() => {
+    // Verificar se as coordenadas calculadas são válidas
+    if (!isNaN(midLat) && !isNaN(midLng) && isFinite(midLat) && isFinite(midLng)) {
+      setMapCenter([midLat, midLng]);
+      setMapZoom(8);
+      
+      // Aguardar a animação antes de navegar
+      setTimeout(() => {
+        handleLocationClick(city.id);
+      }, 1000);
+    } else {
+      // Se as coordenadas são inválidas, navegar diretamente sem animar o mapa
+      console.warn('Coordenadas inválidas para a cidade:', city);
       handleLocationClick(city.id);
-    }, 1000);
+    }
   };
 
   // Criar marcadores para cada cidade do par
@@ -267,11 +287,18 @@ const Home = () => {
     const markers: JSX.Element[] = [];
     
     filteredTwinCities.forEach((city) => {
-      // Marcador para Cidade A
-      markers.push(
-        <Marker
-          key={`${city.id}-A`}
-          position={[city.cityA_latitude, city.cityA_longitude]}
+      // Validar coordenadas da Cidade A
+      const latA = typeof city.cityA_latitude === 'number' && !isNaN(city.cityA_latitude) ? city.cityA_latitude : null;
+      const lngA = typeof city.cityA_longitude === 'number' && !isNaN(city.cityA_longitude) ? city.cityA_longitude : null;
+      const latB = typeof city.cityB_latitude === 'number' && !isNaN(city.cityB_latitude) ? city.cityB_latitude : null;
+      const lngB = typeof city.cityB_longitude === 'number' && !isNaN(city.cityB_longitude) ? city.cityB_longitude : null;
+      
+      // Marcador para Cidade A (apenas se as coordenadas forem válidas)
+      if (latA !== null && lngA !== null) {
+        markers.push(
+          <Marker
+            key={`${city.id}-A`}
+            position={[latA, lngA]}
           icon={hoveredId === city.id ? 
             L.divIcon({
               html: `<div style="
@@ -308,13 +335,15 @@ const Home = () => {
             </div>
           </Popup>
         </Marker>
-      );
+        );
+      }
 
-      // Marcador para Cidade B
-      markers.push(
-        <Marker
-          key={`${city.id}-B`}
-          position={[city.cityB_latitude, city.cityB_longitude]}
+      // Marcador para Cidade B (apenas se as coordenadas forem válidas)
+      if (latB !== null && lngB !== null) {
+        markers.push(
+          <Marker
+            key={`${city.id}-B`}
+            position={[latB, lngB]}
           icon={hoveredId === city.id ? 
             L.divIcon({
               html: `<div style="
@@ -351,7 +380,8 @@ const Home = () => {
             </div>
           </Popup>
         </Marker>
-      );
+        );
+      }
     });
     
     return markers;
