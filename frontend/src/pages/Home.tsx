@@ -257,11 +257,11 @@ const Home = () => {
 
   // Função para focar em uma cidade
   const focusOnCity = (city: TwinCity) => {
-    // Validar se as coordenadas são números válidos
-    const latA = typeof city.cityA_latitude === 'number' && !isNaN(city.cityA_latitude) ? city.cityA_latitude : 0;
-    const lngA = typeof city.cityA_longitude === 'number' && !isNaN(city.cityA_longitude) ? city.cityA_longitude : 0;
-    const latB = typeof city.cityB_latitude === 'number' && !isNaN(city.cityB_latitude) ? city.cityB_latitude : 0;
-    const lngB = typeof city.cityB_longitude === 'number' && !isNaN(city.cityB_longitude) ? city.cityB_longitude : 0;
+    // Converter e validar coordenadas
+    const latA = parseFloat(String(city.cityA_latitude));
+    const lngA = parseFloat(String(city.cityA_longitude));
+    const latB = parseFloat(String(city.cityB_latitude));
+    const lngB = parseFloat(String(city.cityB_longitude));
     
     const midLat = (latA + latB) / 2;
     const midLng = (lngA + lngB) / 2;
@@ -287,14 +287,14 @@ const Home = () => {
     const markers: JSX.Element[] = [];
     
     filteredTwinCities.forEach((city) => {
-      // Validar coordenadas da Cidade A
-      const latA = typeof city.cityA_latitude === 'number' && !isNaN(city.cityA_latitude) ? city.cityA_latitude : null;
-      const lngA = typeof city.cityA_longitude === 'number' && !isNaN(city.cityA_longitude) ? city.cityA_longitude : null;
-      const latB = typeof city.cityB_latitude === 'number' && !isNaN(city.cityB_latitude) ? city.cityB_latitude : null;
-      const lngB = typeof city.cityB_longitude === 'number' && !isNaN(city.cityB_longitude) ? city.cityB_longitude : null;
+      // Converter e validar coordenadas
+      const latA = parseFloat(String(city.cityA_latitude));
+      const lngA = parseFloat(String(city.cityA_longitude));
+      const latB = parseFloat(String(city.cityB_latitude));
+      const lngB = parseFloat(String(city.cityB_longitude));
       
       // Marcador para Cidade A (apenas se as coordenadas forem válidas)
-      if (latA !== null && lngA !== null) {
+      if (!isNaN(latA) && !isNaN(lngA)) {
         markers.push(
           <Marker
             key={`${city.id}-A`}
@@ -339,7 +339,7 @@ const Home = () => {
       }
 
       // Marcador para Cidade B (apenas se as coordenadas forem válidas)
-      if (latB !== null && lngB !== null) {
+      if (!isNaN(latB) && !isNaN(lngB)) {
         markers.push(
           <Marker
             key={`${city.id}-B`}
