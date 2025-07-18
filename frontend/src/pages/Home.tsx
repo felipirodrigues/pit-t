@@ -72,7 +72,7 @@ const Home = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([-14.235, -51.9253]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-8.235, -58.9253]);
   const [mapZoom, setMapZoom] = useState(4);
   const [countryBorders, setCountryBorders] = useState<any>(null);
   const [pittRegion, setPittRegion] = useState<any>(null);
