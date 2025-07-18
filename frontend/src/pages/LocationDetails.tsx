@@ -128,6 +128,7 @@ const LocationDetails = () => {
   const [error, setError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [showMoreIndicators, setShowMoreIndicators] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -483,6 +484,14 @@ const LocationDetails = () => {
     return categoryMap[normalizedInput] || category;
   };
 
+  // Função para alternar a visibilidade de indicadores adicionais
+  const toggleShowMoreIndicators = (category: string) => {
+    setShowMoreIndicators(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
   // Filtrar indicadores usando a normalização de categorias
   const filteredIndicators = indicators.filter(
     indicator => {
@@ -653,10 +662,28 @@ const LocationDetails = () => {
                   {/* Botão "ver mais" se houver mais de 8 indicadores */}
                   {healthIndicators.length > 8 && (
                     <div className="mt-4 flex justify-center">
-                      <button className="bg-white text-green-700 border border-green-200 rounded-lg px-4 py-2 flex items-center gap-2 shadow-sm">
+                      <button 
+                        onClick={() => toggleShowMoreIndicators('health')}
+                        className="bg-white text-green-700 border border-green-200 rounded-lg px-4 py-2 flex items-center gap-2 shadow-sm hover:bg-green-50 transition-colors"
+                      >
                         <MoreHorizontal className="w-4 h-4" />
-                        <span>Ver mais {healthIndicators.length - 8} indicadores</span>
+                        <span>
+                          {showMoreIndicators['health'] 
+                            ? 'Ver menos indicadores' 
+                            : `Ver mais ${healthIndicators.length - 8} indicadores`}
+                        </span>
                       </button>
+                    </div>
+                  )}
+                  
+                  {/* Indicadores adicionais quando expandido */}
+                  {showMoreIndicators['health'] && healthIndicators.length > 8 && (
+                    <div className="mt-4 space-y-3">
+                      {healthIndicators.slice(8).map((indicator, index) => (
+                        <div key={indicator?.id || index + 8}>
+                          {renderCompactHealthCard(indicator)}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -778,10 +805,28 @@ const LocationDetails = () => {
                     {/* Botão "ver mais" se houver mais de 8 indicadores */}
                     {populationIndicators.length > 8 && (
                       <div className="mt-4 flex justify-center">
-                        <button className="bg-white text-blue-700 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-2 shadow-sm">
+                        <button 
+                          onClick={() => toggleShowMoreIndicators('population')}
+                          className="bg-white text-blue-700 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-2 shadow-sm hover:bg-blue-50 transition-colors"
+                        >
                           <MoreHorizontal className="w-4 h-4" />
-                          <span>Ver mais {populationIndicators.length - 8} indicadores</span>
+                          <span>
+                            {showMoreIndicators['population'] 
+                              ? 'Ver menos indicadores' 
+                              : `Ver mais ${populationIndicators.length - 8} indicadores`}
+                          </span>
                         </button>
+                      </div>
+                    )}
+                    
+                    {/* Indicadores adicionais quando expandido */}
+                    {showMoreIndicators['population'] && populationIndicators.length > 8 && (
+                      <div className="mt-4 space-y-3">
+                        {populationIndicators.slice(8).map((indicator, index) => (
+                          <div key={indicator?.id || index + 8}>
+                            {renderCompactGenericCard(indicator, 'blue')}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
