@@ -394,13 +394,13 @@ const Home = () => {
       {/* Overlay para quando o sidebar estiver aberto no mobile */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1100] md:hidden"
           onClick={toggleSidebar}
         />
       )}
       
       {/* Container do mapa */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 pt-16 md:pt-0">
         {isLoading && (
           <div className="flex flex-col items-center justify-center z-[1001] bg-slate-900/80 w-full h-full absolute">
             <Loader2 className="animate-spin h-12 w-12 text-blue-500 mb-4" />
@@ -412,7 +412,8 @@ const Home = () => {
         <MapContainer
           center={mapCenter}
           zoom={mapZoom}
-          style={{ height: '100%', width: '100%' }}
+          style={{ height: 'calc(100% - 0px)', width: '100%' }}
+          className="md:h-full"
           zoomControl={false}
         >
           <LayersControl position="topright">
@@ -488,7 +489,7 @@ const Home = () => {
       </div>
 
       {/* Barra superior com logo no mobile - 3 colunas */}
-      <div className="fixed top-0 left-0 right-0 z-20 md:hidden">
+      <div className="fixed top-0 left-0 right-0 z-[1200] md:hidden">
         <div className="bg-green-800 border-b border-green-700 px-2 py-2">
           <div className="grid grid-cols-[20%_60%_20%] items-center">
             {/* Coluna 1: Logo */}
@@ -582,7 +583,7 @@ const Home = () => {
       </div>
 
       {/* Controles do mapa */}
-      <div className="fixed left-4 top-20 md:top-auto md:bottom-4 z-[1000] flex flex-col gap-2">
+      <div className="fixed left-4 top-24 md:top-auto md:bottom-4 z-[1000] flex flex-col gap-2">
         <button
           onClick={handleZoomIn}
           className="w-10 h-10 bg-black/50 backdrop-blur-sm hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
