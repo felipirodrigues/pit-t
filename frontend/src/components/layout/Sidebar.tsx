@@ -125,7 +125,7 @@ const Sidebar = () => {
               sidebar.classList.toggle('sidebar-open');
             }
           }}
-          className="menu-button fixed top-4 left-4 z-[1400] p-2 bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-full md:hidden hover:shadow-lg hover:from-emerald-600 hover:to-green-700 transition-all duration-300 shadow-md"
+          className="menu-button fixed top-4 left-4 z-[1200] p-2 bg-gradient-to-br from-emerald-500 to-green-600 text-white rounded-full md:hidden hover:shadow-lg hover:from-emerald-600 hover:to-green-700 transition-all duration-300 shadow-md"
           aria-label="Abrir menu"
         >
           <Menu className="w-5 h-5" />
@@ -134,7 +134,7 @@ const Sidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`sidebar fixed top-0 left-0 h-screen w-56 lg:w-64 bg-gradient-to-b from-emerald-800 to-emerald-900 text-white transform transition-all duration-300 ease-in-out z-[1300] shadow-xl flex flex-col md:translate-x-0`}
+        className={`sidebar fixed top-0 left-0 h-screen w-56 lg:w-64 bg-gradient-to-b from-emerald-800 to-emerald-900 text-white transform transition-all duration-300 ease-in-out z-[1100] shadow-xl flex flex-col md:translate-x-0`}
       >
         {/* Logo e header */}
         <div className="relative">

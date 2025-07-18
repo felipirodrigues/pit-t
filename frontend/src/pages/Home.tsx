@@ -316,24 +316,12 @@ const Home = () => {
               className: 'custom-div-icon'
             }) : DefaultIcon
           }
+          eventHandlers={{
+            click: () => {
+              handleLocationClick(city.id);
+            }
+          }}
         >
-          <Popup>
-            <div className="text-center">
-              <h3 className="font-bold text-lg">{city.cityA_name}</h3>
-              <p className="text-sm text-gray-600">
-                Cidade gêmea: {city.cityB_name}
-              </p>
-              {city.description && (
-                <p className="text-sm mt-2">{city.description}</p>
-              )}
-              <button
-                onClick={() => handleLocationClick(city.id)}
-                className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
-              >
-                Ver detalhes
-              </button>
-            </div>
-          </Popup>
         </Marker>
         );
       }
@@ -361,24 +349,12 @@ const Home = () => {
               className: 'custom-div-icon'
             }) : DefaultIcon
           }
+          eventHandlers={{
+            click: () => {
+              handleLocationClick(city.id);
+            }
+          }}
         >
-          <Popup>
-            <div className="text-center">
-              <h3 className="font-bold text-lg">{city.cityB_name}</h3>
-              <p className="text-sm text-gray-600">
-                Cidade gêmea: {city.cityA_name}
-              </p>
-              {city.description && (
-                <p className="text-sm mt-2">{city.description}</p>
-              )}
-              <button
-                onClick={() => handleLocationClick(city.id)}
-                className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
-              >
-                Ver detalhes
-              </button>
-            </div>
-          </Popup>
         </Marker>
         );
       }
@@ -394,7 +370,7 @@ const Home = () => {
       {/* Overlay para quando o sidebar estiver aberto no mobile */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1100] md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1050] md:hidden"
           onClick={toggleSidebar}
         />
       )}
@@ -489,7 +465,7 @@ const Home = () => {
       </div>
 
       {/* Barra superior com logo no mobile - 3 colunas */}
-      <div className="fixed top-0 left-0 right-0 z-[1200] md:hidden">
+      <div className="fixed top-0 left-0 right-0 z-[1000] md:hidden">
         <div className="bg-green-800 border-b border-green-700 px-2 py-2">
           <div className="grid grid-cols-[20%_60%_20%] items-center">
             {/* Coluna 1: Logo */}
@@ -607,7 +583,7 @@ const Home = () => {
   );
 };
 
-// Adicionar estilos CSS para o tooltip da região PIT-T
+// Adicionar estilos CSS para tooltip da região PIT-T
 const styleElement = document.createElement('style');
 styleElement.textContent = `
   .pitt-region-tooltip {
@@ -622,6 +598,18 @@ styleElement.textContent = `
   }
   .pitt-region-tooltip::before {
     border-top-color: rgba(255, 215, 0, 0.9) !important;
+  }
+  
+  /* Estilos para marcadores clicáveis */
+  .custom-div-icon {
+    cursor: pointer !important;
+    transition: transform 0.2s ease-in-out !important;
+  }
+  .custom-div-icon:hover {
+    transform: scale(1.1) !important;
+  }
+  .custom-div-icon:active {
+    transform: scale(0.95) !important;
   }
 `;
 if (!document.head.querySelector('style[data-pitt-tooltips]')) {
