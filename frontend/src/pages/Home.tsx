@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl, GeoJSON, Tooltip } from 'react-leaflet';
 import { MapPin, ZoomIn, ZoomOut, RotateCcw, Loader2, Menu, Navigation } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -68,6 +68,7 @@ const Home = () => {
   const [twinCities, setTwinCities] = useState<TwinCity[]>([]);
   const [filteredTwinCities, setFilteredTwinCities] = useState<TwinCity[]>([]);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [searchTerm, setSearchTerm] = useState('');
@@ -242,9 +243,9 @@ const Home = () => {
   };
 
   // Função para navegar para a página de detalhes
-  const handleLocationClick = (locationId: number) => {
+  const handleLocationClick = useCallback((locationId: number) => {
     navigate(`/location/${locationId}`);
-  };
+  }, [navigate]);
 
   // Função para alternar a visibilidade da sidebar no mobile
   const toggleSidebar = () => {
@@ -283,8 +284,8 @@ const Home = () => {
   };
 
   // Criar marcadores para cada cidade do par
-  const createMarkers = () => {
-    const markers: JSX.Element[] = [];
+  const markers = useMemo(() => {
+    const markersArray: JSX.Element[] = [];
     
     filteredTwinCities.forEach((city) => {
       // Converter e validar coordenadas
@@ -295,73 +296,103 @@ const Home = () => {
       
       // Marcador para Cidade A (apenas se as coordenadas forem válidas)
       if (!isNaN(latA) && !isNaN(lngA)) {
-        markers.push(
+        const markerKey = `${city.id}-A`;
+        const isHovered = hoveredMarker === markerKey;
+        
+        markersArray.push(
           <Marker
-            key={`${city.id}-A`}
+            key={markerKey}
             position={[latA, lngA]}
-          icon={hoveredId === city.id ? 
-            L.divIcon({
+            icon={L.divIcon({
               html: `<div style="
-                background-color: #54a0ff;
-                width: 30px;
-                height: 30px;
+                background-color: ${isHovered ? '#54a0ff' : '#feca57'};
+                width: 25px;
+                height: 25px;
                 border-radius: 50% 50% 50% 0;
                 border: 3px solid #fff;
                 transform: rotate(-45deg);
-                box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
               "></div>`,
-              iconSize: [30, 30],
-              iconAnchor: [15, 30],
-              popupAnchor: [1, -30],
+              iconSize: [25, 25],
+              iconAnchor: [12, 24],
+              popupAnchor: [1, -24],
               className: 'custom-div-icon'
-            }) : DefaultIcon
-          }
-          eventHandlers={{
-            click: () => {
-              handleLocationClick(city.id);
-            }
-          }}
-        >
-        </Marker>
+            })}
+            eventHandlers={{
+              click: () => {
+                handleLocationClick(city.id);
+              },
+              mouseover: () => {
+                setHoveredMarker(markerKey);
+              },
+              mouseout: () => {
+                setHoveredMarker(null);
+              }
+            }}
+          >
+            <Tooltip 
+              direction="top" 
+              offset={[0, -10]}
+              className="marker-tooltip"
+              permanent={false}
+            >
+              {city.cityA_name}
+            </Tooltip>
+          </Marker>
         );
       }
 
       // Marcador para Cidade B (apenas se as coordenadas forem válidas)
       if (!isNaN(latB) && !isNaN(lngB)) {
-        markers.push(
+        const markerKey = `${city.id}-B`;
+        const isHovered = hoveredMarker === markerKey;
+        
+        markersArray.push(
           <Marker
-            key={`${city.id}-B`}
+            key={markerKey}
             position={[latB, lngB]}
-          icon={hoveredId === city.id ? 
-            L.divIcon({
+            icon={L.divIcon({
               html: `<div style="
-                background-color: #54a0ff;
-                width: 30px;
-                height: 30px;
+                background-color: ${isHovered ? '#54a0ff' : '#feca57'};
+                width: 25px;
+                height: 25px;
                 border-radius: 50% 50% 50% 0;
                 border: 3px solid #fff;
                 transform: rotate(-45deg);
-                box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
               "></div>`,
-              iconSize: [30, 30],
-              iconAnchor: [15, 30],
-              popupAnchor: [1, -30],
+              iconSize: [25, 25],
+              iconAnchor: [12, 24],
+              popupAnchor: [1, -24],
               className: 'custom-div-icon'
-            }) : DefaultIcon
-          }
-          eventHandlers={{
-            click: () => {
-              handleLocationClick(city.id);
-            }
-          }}
-        >
-        </Marker>
+            })}
+            eventHandlers={{
+              click: () => {
+                handleLocationClick(city.id);
+              },
+              mouseover: () => {
+                setHoveredMarker(markerKey);
+              },
+              mouseout: () => {
+                setHoveredMarker(null);
+              }
+            }}
+          >
+            <Tooltip 
+              direction="top" 
+              offset={[0, -10]}
+              className="marker-tooltip"
+              permanent={false}
+            >
+              {city.cityB_name}
+            </Tooltip>
+          </Marker>
         );
       }
     });
     
-    return markers;
-  };
+    return markersArray;
+  }, [filteredTwinCities, handleLocationClick, hoveredMarker]);
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -460,7 +491,7 @@ const Home = () => {
           </LayersControl>
           
           <MapController center={mapCenter} zoom={mapZoom} />
-          {createMarkers()}
+          {markers}
         </MapContainer>
       </div>
 
@@ -603,13 +634,22 @@ styleElement.textContent = `
   /* Estilos para marcadores clicáveis */
   .custom-div-icon {
     cursor: pointer !important;
-    transition: transform 0.2s ease-in-out !important;
   }
-  .custom-div-icon:hover {
-    transform: scale(1.1) !important;
+  
+  /* Estilos para tooltips dos marcadores */
+  .marker-tooltip {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    padding: 6px 10px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    white-space: nowrap !important;
   }
-  .custom-div-icon:active {
-    transform: scale(0.95) !important;
+  .marker-tooltip::before {
+    border-top-color: rgba(0, 0, 0, 0.8) !important;
   }
 `;
 if (!document.head.querySelector('style[data-pitt-tooltips]')) {
