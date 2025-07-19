@@ -237,7 +237,7 @@ const Galleries: React.FC = () => {
                 ? 'ring-4 ring-green-500 shadow-xl scale-[1.02]' 
                 : 'hover:shadow-lg hover:scale-[1.05] hover:-translate-y-2'
               }`}
-              onClick={() => setAsFeatured(gallery.id)}
+              onClick={() => openGallery(gallery.galleryUrl)}
             >
               <img
                 src={gallery.coverImage}
