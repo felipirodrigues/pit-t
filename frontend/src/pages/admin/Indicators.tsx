@@ -142,12 +142,20 @@ const Indicators = () => {
   // Abrir modal para edição
   const handleEdit = (indicator: Indicator) => {
     setSelectedIndicator(indicator);
+    
+    // Formatar as datas para o formato YYYY-MM-DD esperado pelos inputs de data
+    const formatDateForInput = (dateString: string | undefined) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0];
+    };
+    
     setFormData({
       twin_city_id: indicator.twin_city_id.toString(),
       category: indicator.category,
       title: indicator.title,
-      study_date_start: indicator.study_date_start || '',
-      study_date_end: indicator.study_date_end || '',
+      study_date_start: formatDateForInput(indicator.study_date_start),
+      study_date_end: formatDateForInput(indicator.study_date_end),
       source_title: indicator.source_title,
       source_link: indicator.source_link || '',
       city_a_value: indicator.city_a_value.toString(),
