@@ -163,22 +163,18 @@ const Indicators = () => {
       if (!dateString) return '';
       
       try {
-        // Tentar diferentes formatos de data
-        let date: Date;
-        
         // Se a data já está no formato YYYY-MM-DD, retornar diretamente
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
           return dateString;
         }
         
-        // Se tem informação de timezone, usar diretamente
-        if (dateString.includes('T') || dateString.includes('Z') || dateString.includes('+')) {
-          date = new Date(dateString);
-        } else {
-          // Se não tem timezone, assumir que é local e criar data local
-          const [year, month, day] = dateString.split('-').map(Number);
-          date = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+        // Para datas ISO (com T e Z), extrair apenas a parte da data
+        if (dateString.includes('T')) {
+          return dateString.split('T')[0];
         }
+        
+        // Para outros formatos, tentar criar uma data
+        const date = new Date(dateString);
         
         // Verificar se a data é válida
         if (isNaN(date.getTime())) {
@@ -276,6 +272,15 @@ const Indicators = () => {
         unit: formData.unit,
         icon: formData.icon || null
       };
+
+      // Log para debug - verificar o que está sendo enviado
+      console.log('Dados sendo enviados para o backend:', data);
+      console.log('Formato das datas:', {
+        start: typeof data.study_date_start,
+        end: typeof data.study_date_end,
+        start_value: data.study_date_start,
+        end_value: data.study_date_end
+      });
 
       if (selectedIndicator) {
         // Atualizar indicador existente
