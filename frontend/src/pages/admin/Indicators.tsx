@@ -110,6 +110,20 @@ const Indicators = () => {
     fetchIcons();
   }, []);
 
+  // Debug: verificar formato das datas quando os indicadores são carregados
+  useEffect(() => {
+    if (indicators.length > 0) {
+      console.log('Indicadores carregados - amostra de datas:', indicators.slice(0, 3).map(indicator => ({
+        id: indicator.id,
+        title: indicator.title,
+        study_date_start: indicator.study_date_start,
+        study_date_end: indicator.study_date_end,
+        start_type: typeof indicator.study_date_start,
+        end_type: typeof indicator.study_date_end
+      })));
+    }
+  }, [indicators]);
+
   // Filtrar indicadores
   const filteredIndicators = indicators.filter(indicator => {
     const cityNames = `${indicator.cityA_name} ${indicator.cityB_name}`.toLowerCase();
@@ -144,18 +158,66 @@ const Indicators = () => {
     setSelectedIndicator(indicator);
     
     // Formatar as datas para o formato YYYY-MM-DD esperado pelos inputs de data
+    // Solução robusta para diferentes ambientes e fusos horários
     const formatDateForInput = (dateString: string | undefined) => {
       if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toISOString().split('T')[0];
+      
+      try {
+        // Tentar diferentes formatos de data
+        let date: Date;
+        
+        // Se a data já está no formato YYYY-MM-DD, retornar diretamente
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+          return dateString;
+        }
+        
+        // Se tem informação de timezone, usar diretamente
+        if (dateString.includes('T') || dateString.includes('Z') || dateString.includes('+')) {
+          date = new Date(dateString);
+        } else {
+          // Se não tem timezone, assumir que é local e criar data local
+          const [year, month, day] = dateString.split('-').map(Number);
+          date = new Date(year, month - 1, day); // month - 1 porque Date usa 0-11
+        }
+        
+        // Verificar se a data é válida
+        if (isNaN(date.getTime())) {
+          console.warn('Data inválida:', dateString);
+          return '';
+        }
+        
+        // Retornar no formato YYYY-MM-DD
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+      } catch (error) {
+        console.error('Erro ao formatar data:', dateString, error);
+        return '';
+      }
     };
+    
+    // Log para debug em produção
+    console.log('Datas originais:', {
+      start: indicator.study_date_start,
+      end: indicator.study_date_end
+    });
+    
+    const formattedStartDate = formatDateForInput(indicator.study_date_start);
+    const formattedEndDate = formatDateForInput(indicator.study_date_end);
+    
+    console.log('Datas formatadas:', {
+      start: formattedStartDate,
+      end: formattedEndDate
+    });
     
     setFormData({
       twin_city_id: indicator.twin_city_id.toString(),
       category: indicator.category,
       title: indicator.title,
-      study_date_start: formatDateForInput(indicator.study_date_start),
-      study_date_end: formatDateForInput(indicator.study_date_end),
+      study_date_start: formattedStartDate,
+      study_date_end: formattedEndDate,
       source_title: indicator.source_title,
       source_link: indicator.source_link || '',
       city_a_value: indicator.city_a_value.toString(),
