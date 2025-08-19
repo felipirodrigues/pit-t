@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, createHashRouter } from 'react-router-dom';
 import MainLayout from '../components/layout/MainLayout';
 import AdminLayout from '../components/layout/AdminLayout';
 import Home from '../pages/Home';
@@ -18,7 +18,8 @@ import Collaboration from '../pages/admin/Collaboration';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AccessDenied from '../pages/AccessDenied';
 
-export const router = createBrowserRouter([
+// Configuração de rotas
+const routeConfig = [
   {
     path: '/',
     element: <MainLayout />,
@@ -99,4 +100,10 @@ export const router = createBrowserRouter([
       }
     ]
   }
-]);
+];
+
+// Usar Hash Router para produção (resolve problema de 404 ao atualizar página)
+// Usar Browser Router para desenvolvimento
+export const router = import.meta.env.PROD 
+  ? createHashRouter(routeConfig)
+  : createBrowserRouter(routeConfig);
