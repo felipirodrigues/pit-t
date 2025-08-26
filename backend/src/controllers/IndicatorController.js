@@ -58,7 +58,11 @@ class IndicatorController {
       }
 
       // Validar a categoria
-      const validCategories = ['Saúde', 'População', 'Comércio', 'Educação', 'Meio Ambiente'];
+      const validCategories = [
+        'Demografia', 'Economia', 'Educação', 'Saúde', 'Infraestrutura', 
+        'Segurança', 'Meio Ambiente', 'Turismo', 'Cultura', 'População', 
+        'Desenvolvimento'
+      ];
       if (!validCategories.includes(req.body.category)) {
         return res.status(400).json({ 
           error: 'Categoria inválida',
@@ -70,6 +74,7 @@ class IndicatorController {
         twin_city_id: req.body.twin_city_id,
         category: req.body.category,
         title: req.body.title,
+        description: req.body.description,
         study_date_start: req.body.study_date_start,
         study_date_end: req.body.study_date_end,
         source_title: req.body.source_title,
@@ -106,7 +111,11 @@ class IndicatorController {
 
       // Validar a categoria (se fornecida)
       if (req.body.category) {
-        const validCategories = ['Saúde', 'População', 'Comércio', 'Educação', 'Meio Ambiente'];
+        const validCategories = [
+          'Demografia', 'Economia', 'Educação', 'Saúde', 'Infraestrutura', 
+          'Segurança', 'Meio Ambiente', 'Turismo', 'Cultura', 'População', 
+          'Desenvolvimento'
+        ];
         if (!validCategories.includes(req.body.category)) {
           return res.status(400).json({ 
             error: 'Categoria inválida',
@@ -119,6 +128,7 @@ class IndicatorController {
         twin_city_id: req.body.twin_city_id || existingIndicator.twin_city_id,
         category: req.body.category || existingIndicator.category,
         title: req.body.title || existingIndicator.title,
+        description: req.body.description !== undefined ? req.body.description : existingIndicator.description,
         study_date_start: req.body.study_date_start !== undefined ? req.body.study_date_start : existingIndicator.study_date_start,
         study_date_end: req.body.study_date_end !== undefined ? req.body.study_date_end : existingIndicator.study_date_end,
         source_title: req.body.source_title || existingIndicator.source_title,
@@ -153,7 +163,11 @@ class IndicatorController {
   // Método para listar categorias disponíveis
   async listCategories(req, res) {
     try {
-      const categories = ['Saúde', 'População', 'Comércio', 'Educação', 'Meio Ambiente'];
+      const categories = [
+        'Demografia', 'Economia', 'Educação', 'Saúde', 'Infraestrutura', 
+        'Segurança', 'Meio Ambiente', 'Turismo', 'Cultura', 'População', 
+        'Desenvolvimento'
+      ];
       res.json(categories);
     } catch (error) {
       console.error('Erro ao listar categorias:', error);

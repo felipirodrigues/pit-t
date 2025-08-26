@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Users, TrendingUp, GraduationCap, Leaf, Building, DollarSign, BarChart, Percent, Heart, Droplet, Syringe, Activity, Users as UsersIcon, Thermometer, Book, FileText, File, MoreHorizontal, AlertCircle, Globe, Axe, Recycle, Pickaxe } from 'lucide-react';
+import { MapPin, Users, TrendingUp, GraduationCap, Leaf, Building, DollarSign, BarChart, Percent, Heart, Droplet, Syringe, Activity, Users as UsersIcon, Thermometer, Book, FileText, File, MoreHorizontal, AlertCircle, Globe, Axe, Recycle, Pickaxe, Info, X } from 'lucide-react';
 import Saude from '../images/saude2.png'
 import Populacao from '../images/populacao2.png'
 import Socioeconomico from '../images/socioeconomico2.png'
@@ -129,6 +129,11 @@ const LocationDetails = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [showMoreIndicators, setShowMoreIndicators] = useState<Record<string, boolean>>({});
+  const [tooltipData, setTooltipData] = useState<{ show: boolean; content: string; position: { x: number; y: number } }>({
+    show: false,
+    content: '',
+    position: { x: 0, y: 0 }
+  });
 
   useEffect(() => {
     const fetchLocationData = async () => {
@@ -492,6 +497,71 @@ const LocationDetails = () => {
     }));
   };
 
+  // Funções para controlar o tooltip
+  const showTooltip = (content: string, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Dimensões do tooltip (estimativas)
+    const tooltipWidth = 300; // Largura máxima do tooltip
+    const tooltipHeight = 120; // Altura estimada do tooltip
+    
+    // Posicionar o tooltip sobre o card (não ao lado)
+    let x = rect.left + rect.width / 2;
+    let y = rect.top + rect.height / 2; // Centro do card
+    
+    // Para mobile, posicionar abaixo do card
+    if (window.innerWidth < 768) {
+      y = rect.bottom + 20;
+    }
+    
+    // Ajustar posição para garantir que o tooltip não seja cortado
+    // Margem de segurança para evitar corte
+    const margin = 30;
+    
+    // Verificar se cabe à esquerda
+    if (x - tooltipWidth / 2 < margin) {
+      x = tooltipWidth / 2 + margin;
+    }
+    
+    // Verificar se cabe à direita
+    if (x + tooltipWidth / 2 > viewportWidth - margin) {
+      x = viewportWidth - tooltipWidth / 2 - margin;
+    }
+    
+    // Verificar se cabe acima
+    if (y - tooltipHeight / 2 < margin) {
+      y = tooltipHeight / 2 + margin;
+    }
+    
+    // Verificar se cabe abaixo
+    if (y + tooltipHeight / 2 > viewportHeight - margin) {
+      y = viewportHeight - tooltipHeight / 2 - margin;
+    }
+    
+    setTooltipData({
+      show: true,
+      content,
+      position: { x, y }
+    });
+  };
+
+  const hideTooltip = () => {
+    setTooltipData(prev => ({ ...prev, show: false }));
+  };
+
+  // Fechar tooltip automaticamente no mobile após alguns segundos
+  useEffect(() => {
+    if (tooltipData.show && window.innerWidth < 768) {
+      const timer = setTimeout(() => {
+        hideTooltip();
+      }, 5000); // 5 segundos no mobile
+      
+      return () => clearTimeout(timer);
+    }
+  }, [tooltipData.show]);
+
   // Filtrar indicadores usando a normalização de categorias
   const filteredIndicators = indicators.filter(
     indicator => {
@@ -552,10 +622,26 @@ const LocationDetails = () => {
         className={`bg-white/90 backdrop-blur-sm rounded-xl shadow-md border ${borderColor} p-3 sm:p-4 h-full transform transition-transform duration-300 hover:scale-105`}
       >
         <div className="flex items-start justify-between mb-2">
-          <h3 className={`text-sm sm:text-base font-medium ${textColor}`}>
-            {indicator.title}
-          </h3>
-          <div className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center ${bgColor} rounded-full text-white`}>
+          <div className="flex-1 mr-2">
+            <h3 className={`text-sm sm:text-base font-medium ${textColor}`}>
+              {indicator.title}
+            </h3>
+            {indicator.description && (
+              <div className="mt-1">
+                                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Evita expandir o card ao clicar
+                      showTooltip(indicator.description!, e);
+                    }}
+                    className={`text-xs bg-blue-50 hover:bg-blue-100 active:bg-blue-200 text-blue-700 hover:text-blue-800 active:text-blue-900 px-2 py-1 rounded-full flex items-center gap-1 transition-all duration-200 shadow-sm hover:shadow-md active:shadow-lg border border-blue-200 hover:border-blue-300 active:border-blue-400 touch-manipulation`}
+                  >
+                  <Info className="w-3 h-3" />
+                  Saiba mais
+                </button>
+              </div>
+            )}
+          </div>
+          <div className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center ${bgColor} rounded-full text-white flex-shrink-0`}>
             <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
@@ -583,9 +669,7 @@ const LocationDetails = () => {
           </div>
         )}
         
-        {indicator.description && (
-          <p className={`text-xs ${descriptionColor} mb-2 line-clamp-2 sm:line-clamp-none`}>{indicator.description}</p>
-        )}
+        {/* Descrição removida - só aparece no tooltip */}
         
         <div className="flex flex-col space-y-2">
           <div className="flex items-center justify-between">
@@ -1200,10 +1284,26 @@ const LocationDetails = () => {
         className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-green-100 p-3 sm:p-4 h-full transform transition-transform duration-300 hover:scale-105"
       >
         <div className="flex items-start justify-between mb-2">
-          <h3 className="text-sm sm:text-base font-medium text-green-800">
-            {indicator.title}
-          </h3>
-          <div className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-green-500 rounded-full text-white">
+          <div className="flex-1 mr-2">
+            <h3 className="text-sm sm:text-base font-medium text-green-800">
+              {indicator.title}
+            </h3>
+            {indicator.description && (
+              <div className="mt-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Evita expandir o card ao clicar
+                    showTooltip(indicator.description!, e);
+                  }}
+                  className="text-xs bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-700 hover:text-green-800 active:text-green-900 px-2 py-1 rounded-full flex items-center gap-1 transition-all duration-200 shadow-sm hover:shadow-md active:shadow-lg border border-green-200 hover:border-green-300 active:border-green-400"
+                >
+                  <Info className="w-3 h-3" />
+                  Saiba mais
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-green-500 rounded-full text-white flex-shrink-0">
             <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
         </div>
@@ -1231,9 +1331,7 @@ const LocationDetails = () => {
           </div>
         )}
         
-        {indicator.description && (
-          <p className="text-xs text-green-600 mb-2 line-clamp-2 sm:line-clamp-none">{indicator.description}</p>
-        )}
+        {/* Descrição removida - só aparece no tooltip */}
         
         <div className="flex flex-col space-y-2">
           <div className="flex items-center justify-between">
@@ -1614,6 +1712,21 @@ const LocationDetails = () => {
             <h3 className="text-sm leading-snug font-medium text-green-800">
               {indicator.title}
             </h3>
+            {/* Botão "Saiba mais" só aparece quando expandido no mobile */}
+            {indicator.description && isExpanded && (
+              <div className="mt-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Evita expandir o card ao clicar
+                    showTooltip(indicator.description!, e);
+                  }}
+                  className="text-xs bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-700 hover:text-green-800 active:text-green-900 px-2 py-1 rounded-full flex items-center gap-1 transition-all duration-200 shadow-sm hover:shadow-md active:shadow-lg border border-green-200 hover:border-green-300 active:border-green-400"
+                >
+                  <Info className="w-3 h-3" />
+                  Saiba mais
+                </button>
+              </div>
+            )}
           </div>
           
           <div 
@@ -1665,10 +1778,7 @@ const LocationDetails = () => {
             </div>
           )}
         
-          {/* Descrição */}
-          {indicator.description && (
-            <p className="text-xs text-green-600 py-2 border-b border-green-100/70">{indicator.description}</p>
-          )}
+          {/* Descrição removida - só aparece no tooltip */}
           
           {/* Valores das cidades */}
           <div className="grid grid-cols-2 gap-3 mt-2">
@@ -1769,6 +1879,21 @@ const LocationDetails = () => {
             <h3 className={`text-sm leading-snug font-medium ${textColor}`}>
               {indicator.title}
             </h3>
+            {/* Botão "Saiba mais" só aparece quando expandido no mobile */}
+            {indicator.description && isExpanded && (
+              <div className="mt-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Evita expandir o card ao clicar
+                    showTooltip(indicator.description!, e);
+                  }}
+                  className={`text-xs bg-blue-50 hover:bg-blue-100 active:bg-blue-200 text-blue-700 hover:text-blue-800 active:text-blue-900 px-2 py-1 rounded-full flex items-center gap-1 transition-all duration-200 shadow-sm hover:shadow-md active:shadow-lg border border-blue-200 hover:border-blue-300 active:border-blue-400`}
+                >
+                  <Info className="w-3 h-3" />
+                  Saiba mais
+                </button>
+              </div>
+            )}
           </div>
           
           <div 
@@ -1820,10 +1945,7 @@ const LocationDetails = () => {
             </div>
           )}
         
-          {/* Descrição */}
-          {indicator.description && (
-            <p className={`text-xs ${descriptionColor} py-2 border-b ${borderColor}/70`}>{indicator.description}</p>
-          )}
+          {/* Descrição removida - só aparece no tooltip */}
           
           {/* Valores das cidades */}
           <div className="grid grid-cols-2 gap-3 mt-2">
@@ -2311,6 +2433,45 @@ const LocationDetails = () => {
 
       </div>
       
+      {/* Tooltip elegante seguindo padrão visual do sistema */}
+      {tooltipData.show && (
+        <div
+          className="fixed bg-white border border-green-200 rounded-lg shadow-lg max-w-xs text-sm leading-relaxed animate-in fade-in duration-200"
+          style={{
+            left: tooltipData.position.x,
+            top: tooltipData.position.y,
+            transform: 'translateX(-50%) translateY(-50%)', // Centralizar tanto horizontal quanto verticalmente
+            zIndex: 9999, // Z-index muito alto para aparecer na frente de tudo
+            pointerEvents: 'auto', // Garantir que o tooltip seja clicável
+            maxWidth: '300px', // Largura máxima para evitar overflow
+            minWidth: '250px' // Largura mínima para boa legibilidade
+          }}
+        >
+          <div className="relative p-3">
+            {/* Seta do tooltip */}
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"></div>
+            
+            {/* Conteúdo do tooltip */}
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-medium text-green-700 flex items-center gap-1">
+                <Info className="w-4 h-4" />
+                Descrição
+              </span>
+              <button
+                onClick={hideTooltip}
+                className="text-green-400 hover:text-green-600 transition-colors p-1 rounded-full hover:bg-green-50"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            
+            <p className="text-gray-700 leading-relaxed">
+              {tooltipData.content}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Aplicar estilos de animação usando style convencional do React */}
       <style dangerouslySetInnerHTML={{ __html: animationStylesUpdated }} />
     </div>

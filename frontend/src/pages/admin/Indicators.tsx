@@ -22,6 +22,7 @@ interface Indicator {
   cityB_name: string;
   category: string;
   title: string;
+  description?: string;
   study_date_start?: string;
   study_date_end?: string;
   source_title: string;
@@ -47,6 +48,7 @@ const Indicators = () => {
     twin_city_id: '',
     category: '',
     title: '',
+    description: '',
     study_date_start: '',
     study_date_end: '',
     source_title: '',
@@ -212,6 +214,7 @@ const Indicators = () => {
       twin_city_id: indicator.twin_city_id.toString(),
       category: indicator.category,
       title: indicator.title,
+      description: indicator.description || '',
       study_date_start: formattedStartDate,
       study_date_end: formattedEndDate,
       source_title: indicator.source_title,
@@ -231,6 +234,7 @@ const Indicators = () => {
       twin_city_id: '',
       category: '',
       title: '',
+      description: '',
       study_date_start: '',
       study_date_end: '',
       source_title: '',
@@ -263,6 +267,7 @@ const Indicators = () => {
         twin_city_id: parseInt(formData.twin_city_id),
         category: formData.category,
         title: formData.title,
+        description: formData.description || null,
         study_date_start: formData.study_date_start || null,
         study_date_end: formData.study_date_end || null,
         source_title: formData.source_title,
@@ -387,6 +392,7 @@ const Indicators = () => {
                     <h3 className="font-medium text-gray-900">
                       {indicator.title}
                     </h3>
+
                     <div className="text-xs text-gray-500">
                       <span className="font-medium">{indicator.cityA_name} - {indicator.cityB_name}</span>
                     </div>
@@ -500,6 +506,7 @@ const Indicators = () => {
                 <tr key={indicator.id}>
                   <td className="px-4 py-2">
                     <div className="text-sm font-medium text-gray-900">{indicator.title}</div>
+
                   </td>
                   <td className="px-4 py-2">
                     <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium bg-${getCategoryColor(indicator.category)}-100 text-${getCategoryColor(indicator.category)}-800`}>
@@ -654,6 +661,19 @@ const Indicators = () => {
                   onChange={handleInputChange}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                   required
+                />
+              </div>
+
+              {/* Descrição */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Descrição</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={3}
+                  placeholder="Descreva detalhadamente este indicador..."
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 />
               </div>
 
