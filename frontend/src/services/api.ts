@@ -1,7 +1,17 @@
 import axios from 'axios';
 
-// Configuração da API usando localhost para desenvolvimento
-export const API_BASE_URL = 'http://localhost:3000';
+// Configuração da API dinâmica baseada no ambiente
+const getApiBaseUrl = () => {
+  if (import.meta.env.DEV) {
+    // Desenvolvimento: localhost
+    return 'http://localhost:3000';
+  } else {
+    // Produção: mesma origem (mesmo servidor)
+    return window.location.origin;
+  }
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // Criar instância do axios com configuração básica
 const api = axios.create({

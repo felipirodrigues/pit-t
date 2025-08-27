@@ -68,9 +68,25 @@ function cesiumAssetsPlugin() {
   };
 }
 
+// Plugin para filtrar .htaccess durante o build
+function filterHtaccessPlugin() {
+  return {
+    name: 'filter-htaccess',
+    generateBundle(options: any, bundle: any) {
+      // Remover .htaccess do bundle se existir
+      Object.keys(bundle).forEach(fileName => {
+        if (fileName.includes('.htaccess')) {
+          delete bundle[fileName];
+          console.log('🚫 .htaccess removido do build');
+        }
+      });
+    }
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), cesiumAssetsPlugin()],
+  plugins: [react(), cesiumAssetsPlugin(), filterHtaccessPlugin()],
   server: {
     host: '0.0.0.0', // Permite conexões externas
     port: 5173,
