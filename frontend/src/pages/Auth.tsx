@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 const Auth = () => {
   const { t } = useTranslation();
   const { login, isAuthenticated, user, logout } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  // const [isLogin, setIsLogin] = useState(true); // Removido - apenas login permitido
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -76,16 +76,17 @@ const Auth = () => {
     // O redirecionamento será tratado pela função logout
   };
 
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: ''
-    });
-    setError('');
-  };
+  // Função de toggle removida - apenas login permitido
+  // const toggleMode = () => {
+  //   setIsLogin(!isLogin);
+  //   setFormData({
+  //     name: '',
+  //     email: '',
+  //     password: '',
+  //     confirmPassword: ''
+  //   });
+  //   setError('');
+  // };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -135,10 +136,10 @@ const Auth = () => {
           <>
             <div>
               <h2 className="text-center text-3xl font-bold text-gray-900">
-                {isLogin ? t('auth.login.title') : t('auth.register.title')}
+                {t('auth.login.title')}
               </h2>
               <p className="mt-2 text-center text-sm text-gray-600">
-                {isLogin ? t('auth.login.subtitle') : t('auth.register.subtitle')}
+                {t('auth.login.subtitle')}
               </p>
             </div>
 
@@ -150,7 +151,8 @@ const Auth = () => {
 
             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-4">
-                {!isLogin && (
+                {/* Campo de nome removido - apenas login permitido */}
+                {/* {!isLogin && (
                   <div>
                     <label htmlFor="name" className="sr-only">
                       {t('auth.form.name')}
@@ -171,7 +173,7 @@ const Auth = () => {
                       />
                     </div>
                   </div>
-                )}
+                )} */}
 
                 <div>
                   <label htmlFor="email" className="sr-only">
@@ -215,7 +217,8 @@ const Auth = () => {
                   </div>
                 </div>
 
-                {!isLogin && (
+                {/* Campo de confirmação de senha removido - apenas login permitido */}
+                {/* {!isLogin && (
                   <div>
                     <label htmlFor="confirmPassword" className="sr-only">
                       {t('auth.form.confirmPassword')}
@@ -236,7 +239,7 @@ const Auth = () => {
                       />
                     </div>
                   </div>
-                )}
+                )} */}
               </div>
 
               <div>
@@ -255,11 +258,12 @@ const Auth = () => {
                       <ArrowRight className="h-5 w-5 text-blue-500 group-hover:text-blue-400" />
                     )}
                   </span>
-                  {isLogin ? t('auth.login.submit') : t('auth.register.submit')}
+                  {t('auth.login.submit')}
                 </button>
               </div>
 
-              <div className="text-center">
+              {/* Botão de alternância removido - apenas login permitido */}
+              {/* <div className="text-center">
                 <button
                   type="button"
                   onClick={toggleMode}
@@ -267,7 +271,7 @@ const Auth = () => {
                 >
                   {isLogin ? t('auth.login.switchToRegister') : t('auth.register.switchToLogin')}
                 </button>
-              </div>
+              </div> */}
             </form>
           </>
         )}
